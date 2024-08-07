@@ -41,7 +41,7 @@ void finalizar_file_manager() {
 bool iniciar_file_manager() {
     for (size_t i = 0; i < NUM_ARQUIVOS; i++) {
         // Abre o arquivo de dados
-        ARQUIVO_DADOS[i] = fopen(NOMES_ARQUIVOS[i], "w+b");
+        ARQUIVO_DADOS[i] = fopen(NOMES_ARQUIVOS[i], "r+b");
         if (ARQUIVO_DADOS[i] == NULL) {
             ARQUIVO_DADOS[i] = fopen(NOMES_ARQUIVOS[i], "w+b"); // Cria o arquivo se não existir
             if (ARQUIVO_DADOS[i] == NULL){
