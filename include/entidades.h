@@ -2,6 +2,7 @@
 #define entidades_h
 
 #include <stdbool.h>
+#include <stddef.h>
 
 typedef enum {
     PACIENTE,
@@ -24,9 +25,9 @@ typedef struct {
  */
 typedef struct {
     int id;
-    int id_paciente; // Chave relacionada
-    int id_medico; // Chave estrangeira
-    int id_relatorio; // Chave estrangeira
+    unsigned long long id_paciente; // Chave relacionada
+    size_t id_medico; // Chave estrangeira
+    size_t id_relatorio; // Chave estrangeira
     Timestamp data_agendamento;  // Data e hora do agendamento
     Timestamp data_consulta; // Data e hora da consulta
     bool paciente_compareceu; // Se o paciente compareceu
@@ -36,7 +37,7 @@ typedef struct {
  * Estrutura de dados que representa um paciente
  */
 typedef struct {
-    int id; 
+    unsigned long long id;
     char nome[50]; // Nome do paciente
     char sobrenome[50]; // Sobrenome do paciente
     char genero; // Gênero do paciente (M ou F)
@@ -50,7 +51,7 @@ typedef struct {
 * Estrutura de dados que representa um médico
 */
 typedef struct {
-    int id; 
+    size_t id; 
     char nome[50]; // Nome do médico
     char sobrenome[50]; // Sobrenome do médico
     char especializacao[50]; // Especialização do médico
@@ -60,7 +61,7 @@ typedef struct {
  * Estrutura de dados que representa um relatório de atendimento
  */
 typedef struct {
-    int id;
+    size_t id;
     Timestamp data_inicio; // Data e hora de início do atendimento
     Timestamp data_final; // Data e hora de finalização do atendimento
     char resumo[100]; // Resumo do atendimento
