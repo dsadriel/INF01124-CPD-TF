@@ -2,7 +2,7 @@
 #include "entidades_utils.h"
 
 void parse_date(char *date, Timestamp *tm) {
-    sscanf(date, "%d/%d/%d %d:%d", &tm->dia, &tm->mes, &tm->ano, &tm->hora, &tm->minuto);
+    sscanf(date, "%d-%d-%dT%d:%d", &tm->ano, &tm->mes, &tm->dia, &tm->hora, &tm->minuto);
 }
 
 void imprimir(TipoEntidade tipo, void *entidade) {
@@ -22,7 +22,7 @@ void imprimir(TipoEntidade tipo, void *entidade) {
 }
 
 void __imprimir_paciente(Paciente *paciente) {
-    printf("ID: %llu\n", paciente->id);
+    printf("ID: %u\n", paciente->id);
     printf("Nome: %s %s\n", paciente->nome, paciente->sobrenome);
     printf("Gênero: %c\n", paciente->genero);
     printf("Data de nascimento: %02d/%02d/%04d\n", paciente->data_nascimento.dia,
@@ -33,14 +33,14 @@ void __imprimir_paciente(Paciente *paciente) {
 }
 
 void __imprimir_medico(Medico *medico) {
-    printf("ID: %zu\n", medico->id);
+    printf("ID: %u\n", medico->id);
     printf("Nome: %s %s\n", medico->nome, medico->sobrenome);
     printf("Especialização: %s\n", medico->especializacao);
 }
 
 void __imprimir_agendamento(Agendamento *agendamento) {
-    printf("ID: %d\n", agendamento->id);
-    printf("ID Paciente: %llu\n", agendamento->id_paciente);
+    printf("ID: %u\n", agendamento->id);
+    printf("ID Paciente: %u\n", agendamento->id_paciente);
     printf("ID Médico: %zu\n", agendamento->id_medico);
     printf("ID Relatório: %zu\n", agendamento->id_relatorio);
     printf("Data de agendamento: %02d/%02d/%04d %02d:%02d\n", agendamento->data_agendamento.dia,
