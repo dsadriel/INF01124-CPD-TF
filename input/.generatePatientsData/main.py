@@ -74,7 +74,7 @@ if __name__ == "__main__":
     for row in src:
         # Generate patient data
         gender = row['Gender'].lower()
-        id = int(row['PatientId'].replace('E-', ''))
+        id = int(row['PatientId'].replace('E-', '')) % 4294967295  # Limite máximo dos IDs de paciente
         if id in patients_ids:
             continue # Patient already exists
         patients_ids.append(id)

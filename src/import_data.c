@@ -8,6 +8,7 @@
 
 #define MAX_LINE_LENGTH 300
 #define FILE_NAME_LENGTH 100
+#define PATIENT_ID_MAX 4294967295
 
 bool importar_agendamentos(char *file_path);
 bool importar_pacientes(char *file_path);
@@ -23,7 +24,7 @@ int main(int argc, char **argv) {
         return 1;
     }
 
-    // Obtem o nome do arquivo de agendamentos
+    // Obtém o nome do arquivo de agendamentos
     char file_name[FILE_NAME_LENGTH] = {0};
     if (argc == 2) {
         strncpy(file_name, argv[1],
@@ -41,7 +42,7 @@ int main(int argc, char **argv) {
         return 1;
     }
 
-    // Obtem o nome do arquivo de pacientes
+    // Obtém o nome do arquivo de pacientes
     if (argc == 3) {
         strncpy(file_name, argv[2],
                 FILE_NAME_LENGTH); // Copia o nome do arquivo passado como argumento
@@ -58,16 +59,16 @@ int main(int argc, char **argv) {
     }
 
     finalizar_file_manager();
-    
+
     printf("Dados importados com sucesso.\n");
     return 0;
 }
 
 /**
  * Importa os agendamentos de um arquivo CSV para a base de dados
- * 
+ *
  * @param file_path Caminho do arquivo CSV
- * 
+ *
  * @return true se a importação foi bem sucedida, false caso contrário
  */
 bool importar_agendamentos(char *file_path) {
@@ -79,14 +80,17 @@ bool importar_agendamentos(char *file_path) {
         return false;
     }
 
-    printf("Importando dados do arquivo %s...\n", file_path);
+    printf("Importando dados de AGENDAMENTOS do arquivo %s...\n", file_path);
 
     char linha[MAX_LINE_LENGTH] = {0};
     fgets(linha, MAX_LINE_LENGTH, arquivo_agendamentos);
-    if (strcmp(linha, "PatientId,AppointmentID,Gender,ScheduledDay,AppointmentDay,Age,"
-                      "Neighbourhood,Scholarship,Hipertension,Diabetes,Alcoholism,Handcap,"
-                      "SMS_received,No-show\n") != 0) {
-        printf("Cabeçalho do arquivo de entrada inválido. Por favor, verifique o arquivo\n");
+    char formato_cabecalho[] = "PatientId,AppointmentID,Gender,ScheduledDay,AppointmentDay,Age,"
+                               "Neighbourhood,Scholarship,Hipertension,Diabetes,Alcoholism,Handcap,"
+                               "SMS_received,No-show\n";
+    if (strcmp(linha, formato_cabecalho) != 0) {
+        printf("Cabeçalho do arquivo de entrada inválido. Por favor, verifique o arquivo\nO "
+               "formato correto é o seguinte:\n\t%s",
+               formato_cabecalho);
         fclose(arquivo_agendamentos);
         finalizar_file_manager();
         return 1;
@@ -96,7 +100,7 @@ bool importar_agendamentos(char *file_path) {
         Agendamento agendamento = {0};
 
         char *token = strtok(linha, ","); // PatientId
-        agendamento.id_paciente = strtoull(token, NULL, 10);
+        agendamento.id_paciente = (size_t)(strtoull(token, NULL, 10) % PATIENT_ID_MAX);
 
         token = strtok(NULL, ","); // AppointmentID
         agendamento.id = strtoull(token, NULL, 10);
@@ -145,9 +149,9 @@ bool importar_agendamentos(char *file_path) {
 
 /**
  * Importa os pacientes de um arquivo CSV para a base de dados
- * 
+ *
  * @param file_path Caminho do arquivo CSV
- * 
+ *
  * @return true se a importação foi bem sucedida, false caso contrário
  */
 bool importar_pacientes(char *file_path) {
@@ -158,13 +162,16 @@ bool importar_pacientes(char *file_path) {
         return false;
     }
 
-    printf("Importando dados do arquivo %s...\n", file_path);
+    printf("Importando dados de PACIENTES do arquivo %s...\n", file_path);
 
     char linha[MAX_LINE_LENGTH] = {0};
     fgets(linha, MAX_LINE_LENGTH, arquivo_pacientes);
-    if (strcmp(linha, "id,nome,sobrenome,genero,dia_nascimento,mes_nascimento,ano_nascimento,"
-                      "bairro,hipertensao,diabetes,alcoolismo\n") != 0) {
-        printf("Cabeçalho do arquivo de entrada inválido. Por favor, verifique o arquivo\n");
+    char formato_cabecalho[] = "id,nome,sobrenome,genero,dia_nascimento,mes_nascimento,ano_"
+                               "nascimento,bairro,hipertensao,diabetes,alcoolismo\n";
+    if (strcmp(linha, formato_cabecalho) != 0) {
+        printf("Cabeçalho do arquivo de entrada inválido. Por favor, verifique o arquivo\nO "
+               "formato correto é o seguinte:\n\t%s",
+               formato_cabecalho);
         fclose(arquivo_pacientes);
         finalizar_file_manager();
         return 1;
@@ -174,7 +181,7 @@ bool importar_pacientes(char *file_path) {
         Paciente paciente = {0};
 
         char *token = strtok(linha, ","); // id
-        paciente.id = strtoull(token, NULL, 10);
+        paciente.id = (size_t)(strtoull(token, NULL, 10) % PATIENT_ID_MAX);
 
         token = strtok(NULL, ","); // nome
         strncpy(paciente.nome, token, 50);
@@ -223,9 +230,6 @@ bool importar_pacientes(char *file_path) {
 
         break; // Remova essa linha após implementar a lógica de inserção no índice
     }
-
-    Paciente *paciente = ler_paciente(0);
-    imprimir(PACIENTE, paciente);
 
     fclose(arquivo_pacientes);
     return true;

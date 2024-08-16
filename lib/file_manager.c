@@ -139,9 +139,3 @@ size_t fappend(const void *content, size_t size, size_t amount, FILE *file) {
     fseek(file, current, SEEK_SET);
     return written;
 }
-
-/**
- * Converte uma string para um data
- * 
- * @param data string no formato dd/mm/yyyy
- */

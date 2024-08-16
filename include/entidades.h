@@ -24,8 +24,8 @@ typedef struct {
  * Estrutura de dados que representa um agendamento
  */
 typedef struct {
-    int id;
-    unsigned long long id_paciente; // Chave relacionada
+    size_t id;
+    size_t id_paciente; // Chave relacionada
     size_t id_medico; // Chave estrangeira
     size_t id_relatorio; // Chave estrangeira
     Timestamp data_agendamento;  // Data e hora do agendamento
@@ -37,7 +37,7 @@ typedef struct {
  * Estrutura de dados que representa um paciente
  */
 typedef struct {
-    unsigned long long id;
+    size_t id;
     char nome[50]; // Nome do paciente
     char sobrenome[50]; // Sobrenome do paciente
     char genero; // Gênero do paciente (M ou F)
