@@ -17,6 +17,15 @@ char *NOMES_INDICES[NUM_ARQUIVOS] = { // Nomes dos arquivos de índices
 FILE *obter_arquivo_dados(TipoEntidade tipo) { return ARQUIVO_DADOS[tipo]; }
 
 /**
+ * Retorna o ponteiro para o arquivo de índices de acordo com o tipo de entidade.
+ *
+ * @param tipo tipo da entidade
+ *
+ * @return ponteiro para o arquivo de índices
+ */
+FILE *obter_arquivo_indices(TipoEntidade tipo) { return ARQUIVO_INDICES[tipo]; }
+
+/**
  * Finaliza o file manager. Fecha os arquivos de pacientes, médicos, agendamentos e relatórios.
  *
  * @return void
@@ -91,7 +100,7 @@ Agendamento *ler_agendamento(size_t id) {
     if (agendamento == NULL)
         return NULL;
 
-    fseek(arquivo, id * sizeof(Agendamento), SEEK_SET);
+    fseek(arquivo, sizeof(Agendamento), SEEK_SET);
     fread(agendamento, sizeof(Agendamento), 1, arquivo);
 
     return agendamento;
@@ -130,12 +139,13 @@ Paciente *ler_paciente(size_t id) {
  * @param amount quantidade de elementos
  * @param file ponteiro para o arquivo
  * 
- * @return quantidade de elementos escritos
+ * @return offset do arquivo após a inserção
  */
-size_t fappend(const void *content, size_t size, size_t amount, FILE *file) {
+size_t fappend(const void *content, size_t size, FILE *file) {
     size_t current = ftell(file);
     fseek(file, 0, SEEK_END);
-    size_t written = fwrite(content, size, amount, file);
+    size_t offset = ftell(file);
+    size_t written = fwrite(content, size, 1, file);
     fseek(file, current, SEEK_SET);
-    return written;
+    return written == 1 ? offset : -1; // Retorna -1 se não foi possível escrever
 }
