@@ -1,4 +1,5 @@
 #include "b_tree_disc.h"
+#include "utils.h"
 #include <stdlib.h>
 #include <string.h>
 
@@ -19,7 +20,7 @@ bool salvar_arvore(FILE *arquivo, bTree *arvore__) {
     // Cria uma cópia da árvore para manipulação
     bTree *arvore = __copia_descritor(arvore__);
     if (arvore == NULL) {
-        printf("Erro ao copiar a árvore\n");
+        print(LOG_ERROR, "Erro ao copiar a árvore\n");
         return false;
     }
 
@@ -30,7 +31,7 @@ bool salvar_arvore(FILE *arquivo, bTree *arvore__) {
         // Salva o nodo raiz
         size_t offset_raiz = salvar_nodo(arquivo, arvore->raiz, arvore->ordem);
         if (offset_raiz == 0) {
-            printf("Erro ao salvar a raiz\n");
+            print(LOG_ERROR, "Erro ao salvar a raiz\n");
             return false;
         }
 
@@ -45,7 +46,7 @@ bool salvar_arvore(FILE *arquivo, bTree *arvore__) {
 
     // Salva o descritor no arquivo
     if (fwrite(arvore, sizeof(bTree), 1, arquivo) != 1) {
-        printf("Erro ao salvar o descritor da árvore\n");
+        print(LOG_ERROR, "Erro ao salvar o descritor da árvore\n");
         return false;
     }
 
@@ -83,19 +84,19 @@ size_t salvar_nodo(FILE *arq, nodoBTree *n_, int ordem) {
     // Salva o nodo
     size_t offset_nodo = ftell(arq);
     if (fwrite(n, sizeof(nodoBTree), 1, arq) != 1) {
-        printf("Erro ao salvar o nodo\n");
+        print(LOG_ERROR, "Erro ao salvar o nodo\n");
         return 0;
     }
 
     // Salva as chaves
     if (fwrite(n->keys, sizeof(keytype), max_chaves, arq) != max_chaves) {
-        printf("Erro ao salvar as chaves\n");
+        print(LOG_ERROR, "Erro ao salvar as chaves\n");
         return 0; // Erro ao salvar as chaves
     }
 
     // Salva os filhos
     if (fwrite(n->filhos, sizeof(nodoBTree *), max_filhos, arq) != max_filhos) {
-        printf("Erro ao salvar os filhos\n");
+        print(LOG_ERROR, "Erro ao salvar os filhos\n");
         return 0; // Erro ao salvar os filhos
     }
 
@@ -116,26 +117,26 @@ size_t salvar_nodo(FILE *arq, nodoBTree *n_, int ordem) {
  */
 bTree *carregar_arvore(FILE *arquivo) {
     if (arquivo == NULL) {
-        printf("Arquivo inválido\n");
+        print(LOG_ERROR, "Arquivo inválido\n");
         return NULL;
     }
 
     bTree *a = malloc(sizeof(bTree));
     if (a == NULL) {
-        printf("Erro ao alocar memória para a árvore\n");
+        print(LOG_ERROR, "Erro ao alocar memória para a árvore\n");
         return NULL;
     }
 
     fseek(arquivo, 0, SEEK_SET);
     if (fread(a, sizeof(bTree), 1, arquivo) != 1) {
-        printf("Erro ao ler o descritor da árvore\n");
+        print(LOG_ERROR, "Erro ao ler o descritor da árvore\n");
         free(a);
         return NULL; // Não foi possível carregar a árvore;
     }
 
     a->raiz = carregar_nodo(arquivo, (size_t)a->raiz, NULL, a->ordem);
     if (a->raiz == NULL && a->ordem > 0) {
-        printf("Erro ao carregar a raiz da árvore\n");
+        print(LOG_ERROR, "Erro ao carregar a raiz da árvore\n");
         free(a);
         return NULL;
     }

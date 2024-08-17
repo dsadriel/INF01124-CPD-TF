@@ -7,8 +7,8 @@ void print(log_level level, const char *__format, ...) {
 
     // Select color and label based on log level
     switch (level) {
-        case LOG_INFO:
-            printf(GREEN "[INFO] " RESET);
+        case LOG_SUCCESS:
+            printf(GREEN "[SUCCESS] " RESET);
             break;
         case LOG_WARNING:
             printf(YELLOW "[WARNING] " RESET);
@@ -16,7 +16,7 @@ void print(log_level level, const char *__format, ...) {
         case LOG_ERROR:
             printf(RED "[ERROR] " RESET);
             break;
-        case LOG_NONE:
+        case LOG_INFO:
         default:
             break;
     }

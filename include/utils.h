@@ -11,8 +11,8 @@
 #define GREEN   "\033[32m"      // Info
 
 typedef enum {
-    LOG_NONE,
     LOG_INFO,
+    LOG_SUCCESS,
     LOG_WARNING,
     LOG_ERROR
 } log_level;
