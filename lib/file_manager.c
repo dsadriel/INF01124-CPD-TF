@@ -47,11 +47,11 @@ void finalizar_file_manager() {
  *
  * @return true se a inicialização foi bem sucedida, false caso contrário
  */
-bool iniciar_file_manager() {
+bool iniciar_file_manager(bool sobrescrever) {
     for (size_t i = 0; i < NUM_ARQUIVOS; i++) {
         // Abre o arquivo de dados
         ARQUIVO_DADOS[i] = fopen(NOMES_ARQUIVOS[i], "r+b");
-        if (ARQUIVO_DADOS[i] == NULL) {
+        if (ARQUIVO_DADOS[i] == NULL || sobrescrever) {
             ARQUIVO_DADOS[i] = fopen(NOMES_ARQUIVOS[i], "w+b"); // Cria o arquivo se não existir
             if (ARQUIVO_DADOS[i] == NULL){
                 finalizar_file_manager();
@@ -60,7 +60,7 @@ bool iniciar_file_manager() {
         }
         // Abre o arquivo de índices
         ARQUIVO_INDICES[i] = fopen(NOMES_INDICES[i], "r+b");
-        if (ARQUIVO_INDICES[i] == NULL) {
+        if (ARQUIVO_INDICES[i] == NULL || sobrescrever) {
             ARQUIVO_INDICES[i] = fopen(NOMES_INDICES[i], "w+b"); // Cria o arquivo se não existir
             if (ARQUIVO_INDICES[i] == NULL){
                 finalizar_file_manager();
@@ -114,7 +114,7 @@ Agendamento *ler_agendamento(size_t id) {
  * @return ponteiro para o paciente
  * @return NULL se não foi possível ler o paciente
  */
-Paciente *ler_paciente(size_t id) {
+Paciente *ler_paciente(size_t offset) {
     FILE *arquivo = ARQUIVO_DADOS[PACIENTE];
     if (arquivo == NULL)
         return NULL;
@@ -123,7 +123,7 @@ Paciente *ler_paciente(size_t id) {
     if (paciente == NULL)
         return NULL;
 
-    fseek(arquivo, id * sizeof(Paciente), SEEK_SET);
+    fseek(arquivo, offset, SEEK_SET);
     fread(paciente, sizeof(Paciente), 1, arquivo);
 
     return paciente;
