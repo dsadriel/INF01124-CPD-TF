@@ -17,12 +17,13 @@ void finalizar_file_manager();
 
 size_t obter_indice_arquivo(size_t id, TipoEntidade tipo);
 FILE *obter_arquivo_dados(TipoEntidade tipo);
+FILE *obter_arquivo_indices(TipoEntidade tipo);
 
 Agendamento *ler_agendamento(size_t id);
 Paciente *ler_paciente(size_t id);
 Medico *ler_medico(size_t id);
 RelatorioAtendimento *ler_relatorio(size_t id);
 
-size_t fappend(const void *content, size_t size, size_t amount, FILE *file);
+size_t fappend(const void *content, size_t size, FILE *file);
 
 #endif
