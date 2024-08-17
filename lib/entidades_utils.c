@@ -11,11 +11,22 @@ void imprimir(TipoEntidade tipo, void *entidade) {
     case PACIENTE:
         __imprimir_paciente((Paciente *)entidade);
         break;
-    case MEDICO:
-        __imprimir_medico((Medico *)entidade);
-        break;
+    
     case AGENDAMENTO:
         __imprimir_agendamento((Agendamento *)entidade);
+        break;
+    default:
+        break;
+    }
+}
+
+void imprimir_linha(TipoEntidade tipo, void *entidade) {
+    switch (tipo) {
+    case PACIENTE:
+        __imprimir_paciente_linha((Paciente *)entidade);
+        break;
+    case AGENDAMENTO:
+        __imprimir_agendamento_linha((Agendamento *)entidade);
         break;
     default:
         break;
@@ -33,10 +44,12 @@ void __imprimir_paciente(Paciente *paciente) {
     printf("Alcoolismo: %s\n", paciente->alcoolismo ? "Sim" : "Não");
 }
 
-void __imprimir_medico(Medico *medico) {
-    printf("ID: %u\n", medico->id);
-    printf("Nome: %s %s\n", medico->nome, medico->sobrenome);
-    printf("Especialização: %s\n", medico->especializacao);
+void __imprimir_paciente_linha(Paciente *paciente) {
+    printf("%10u | %50s %50s |   %c    | %02d/%02d/%04d |    %s   |    %s   |    %s   \n",
+           paciente->id, paciente->nome, paciente->sobrenome, paciente->genero,
+           paciente->data_nascimento.dia, paciente->data_nascimento.mes,
+           paciente->data_nascimento.ano, paciente->hipertensao ? "Sim" : "Não",
+           paciente->diabetes ? "Sim" : "Não", paciente->alcoolismo ? "Sim" : "Não");
 }
 
 void __imprimir_agendamento(Agendamento *agendamento) {
@@ -56,20 +69,30 @@ void __imprimir_agendamento(Agendamento *agendamento) {
     }
 }
 
+void __imprimir_agendamento_linha(Agendamento *agendamento) {
+    printf("%10u | %10u | %10u | %02d/%02d/%04d %02d:%02d | %02d/%02d/%04d %02d:%02d |    %s   | %10u\n",
+           agendamento->id, agendamento->id_paciente, agendamento->id_medico,
+           agendamento->data_agendamento.dia, agendamento->data_agendamento.mes,
+           agendamento->data_agendamento.ano, agendamento->data_agendamento.hora,
+           agendamento->data_agendamento.minuto, agendamento->data_consulta.dia,
+           agendamento->data_consulta.mes, agendamento->data_consulta.ano,
+           agendamento->data_consulta.hora, agendamento->data_consulta.minuto,
+           agendamento->paciente_compareceu ? "Sim" : "Não", agendamento->id_relatorio);
+}
+
 Timestamp obter_data_hora_atual() {
     time_t t = time(NULL);
     struct tm tm = *localtime(&t);
 
     Timestamp timestamp;
     timestamp.ano = tm.tm_year + 1900; // Ano atual
-    timestamp.mes = tm.tm_mon + 1; // Mês atual
-    timestamp.dia = tm.tm_mday; // Dia atual
-    timestamp.hora = tm.tm_hour; // Hora atual
-    timestamp.minuto = tm.tm_min; // Minuto atual
+    timestamp.mes = tm.tm_mon + 1;     // Mês atual
+    timestamp.dia = tm.tm_mday;        // Dia atual
+    timestamp.hora = tm.tm_hour;       // Hora atual
+    timestamp.minuto = tm.tm_min;      // Minuto atual
 
     return timestamp;
 }
-
 
 void ler_entidade(TipoEntidade tipo, void *entidade) {
     switch (tipo) {
@@ -113,7 +136,6 @@ void __ler_paciente(Paciente *paciente) {
     scanf("%d", &alcoolismo);
     paciente->alcoolismo = (bool)alcoolismo;
 }
-
 
 void __ler_agendamento(Agendamento *agendamento) {
     printf("ID Paciente: ");

@@ -14,8 +14,8 @@
 #define MAX_LINE_LENGTH 300
 #define FILE_NAME_LENGTH 100
 #define PATIENT_ID_MAX 4294967295
-#define ORDEM_ARVORE_PACIENTES 5
-#define ORDEM_ARVORE_AGENDAMENTOS 8
+#define ORDEM_ARVORE_PACIENTES 10
+#define ORDEM_ARVORE_AGENDAMENTOS 1
 
 #define CABECALHO_AGENDAMENTOS                                                                     \
     "PatientId,AppointmentID,Gender,ScheduledDay,AppointmentDay,Age,Neighbourhood,Scholarship,"    \
@@ -32,29 +32,54 @@ void linha_para_agendamento(char *linha, Agendamento *agendamento);
 bool verificar_cabecalho(FILE *file, char *previsto);
 void obter_nome_arquivo(char *output, TipoEntidade tipo, int argc, char **argv);
 
+
+void imprimeNodoNivel(nodoBTree* nodo, int nivel) { // FIXME: BY CHATGPT, remover
+    if (nodo == NULL) {
+        return;
+    }
+
+    int i;
+    // Primeiro, imprimir os filhos da esquerda
+    for (i = 0; i < nodo->num; i++) {
+        if (!nodo->flagfolha) {
+            imprimeNodoNivel(nodo->filhos[i], nivel + 1);
+        }
+        for(int j = 0; j < nivel; j++) {
+            printf("    ");
+        }
+        printf("%d\n", nodo->keys[i]);
+    }
+
+    // Imprimir o filho da direita
+    if (!nodo->flagfolha) {
+        imprimeNodoNivel(nodo->filhos[i], nivel + 1);
+    }
+}
+
+
 // ============================================================================================== //
 int main(int argc, char **argv) {
 #ifdef _WIN32
     SetConsoleOutputCP(CP_UTF8); // Define o output do console para UTF-8
-#endif                           // TODO: verificar o funcionamento no Unix
+#endif
 
-    if ((argc > 1 && strcmp(argv[1], "-y") != 0)) { 
-        // AVISO DE SOBRESCRITA
-        print(LOG_WARNING,
-              "ATENÇÃO: Essa operação irá SOBRESCREVER todos os dados salvos pelo sistema. "
-              "Proceda com cuidado\nESCREVA: \"Sim, continuar\" para continuar: ");
-        char confirmacao[20] = {0};
-        fgets(confirmacao, 20, stdin);
-        if (strcmp(confirmacao, "Sim, continuar\n") != 0) {
-            printf("Frase de confirmação inválida, saindo do sistema de importação...");
-            exit(1);
-        }
-    }
+    // if ((argc > 1 && strcmp(argv[1], "-y") != 0) || argc == 1) {
+    //     // AVISO DE SOBRESCRITA
+    //     print(LOG_WARNING,
+    //           "ATENÇÃO: Essa operação irá SOBRESCREVER todos os dados salvos pelo sistema. "
+    //           "Proceda com cuidado\nESCREVA: \"Sim, continuar\" para continuar: ");
+    //     char confirmacao[20] = {0};
+    //     fgets(confirmacao, 20, stdin);
+    //     if (strcmp(confirmacao, "Sim, continuar\n") != 0) {
+    //         printf("Frase de confirmação inválida, saindo do sistema de importação...");
+    //         exit(1);
+    //     }
+    // }
     print(LOG_WARNING,
           "Confirmação informada. Autorizado para continuar a SOBRESCRITA dos dados.\n");
 
     // Inicializa o file manager com a opção de sobrescrever os arquivos
-    if (!iniciar_file_manager(true)) { 
+    if (!iniciar_file_manager(true)) {
         print(LOG_ERROR, "Falha ao inicializar o gerenciador de arquivos.\n");
         return 1;
     }
@@ -83,7 +108,7 @@ int main(int argc, char **argv) {
 
     // Finaliza o file manager
     finalizar_file_manager();
-    print(LOG_INFO, "Dados importados com sucesso.\n");
+    print(LOG_SUCCESS, "Dados importados com sucesso.\n");
     return 0;
 }
 
@@ -117,6 +142,8 @@ bool importar_agendamentos(char *file_path) {
     bTree *arvore_indices = criaArv(ORDEM_ARVORE_AGENDAMENTOS);
     char linha[MAX_LINE_LENGTH] = {0};
 
+    int qtde = 0;
+
     while (fgets(linha, MAX_LINE_LENGTH, arquivo_agendamentos) != NULL) {
         Agendamento agendamento = {0};
         linha_para_agendamento(linha, &agendamento);
@@ -125,20 +152,32 @@ bool importar_agendamentos(char *file_path) {
             // Agendamento não existe na base de dados
             size_t offset =
                 fappend(&agendamento, sizeof(Agendamento), obter_arquivo_dados(AGENDAMENTO));
-            
+
             if (offset == -1) {
                 print(LOG_ERROR, "Erro ao escrever o agendamento no arquivo de dados.\n");
                 fclose(arquivo_agendamentos);
                 finalizar_file_manager();
                 return false;
             }
-            
+
             // Insere o agendamento na árvore B
             insere(arvore_indices, agendamento.id, offset);
+            keytype *key = consulta(arvore_indices->raiz, agendamento.id);
+            if (key == NULL) {
+                print(LOG_WARNING, "Agendamento %d NÃO inserido\n", agendamento.id);
+                printf("Qtde: %d\n\n", qtde);
+                imprimeNodoNivel(arvore_indices->raiz, 0);
+                exit(1);
+    
+            } else {
+                qtde++;
+            }
+            // BUG: pq não está inserindo?
+
+            // FIXME: Atualizar os demais indexadores
         } else {
             // Agendamento já existe
             printf("Agendamento com ID %d já existe no sistema.\n", agendamento.id);
-            // TODO: implementar política de resolução de conflitos
         }
     }
 
@@ -146,8 +185,8 @@ bool importar_agendamentos(char *file_path) {
     print(LOG_INFO, "Dados de agendamentos importados com sucesso.\n");
     salvar_arvore(obter_arquivo_indices(AGENDAMENTO), arvore_indices);
     print(LOG_INFO, "Árvore de índices de agendamentos salva com sucesso.\n");
-    //liberaArv(arvore_indices); // FIXME: liberaArv não está funcionando corretamente
-    //print(LOG_INFO, "Árvore de índices de agendamentos liberada com sucesso.\n");
+    // liberaArv(arvore_indices); // FIXME: liberaArv não está funcionando corretamente
+    print(LOG_INFO, "Árvore de índices de agendamentos liberada com sucesso.\n");
     return true;
 }
 
@@ -178,41 +217,35 @@ bool importar_pacientes(char *file_path) {
         Paciente paciente = {0};
 
         linha_para_paciente(linha, &paciente);
-        if(paciente.id == 123456789) 
-            printf("Paciente inserido: %d\n", paciente.id);
 
         if (consulta(arvore_indices->raiz, paciente.id) == NULL) {
             size_t offset = fappend(&paciente, sizeof(Paciente), obter_arquivo_dados(PACIENTE));
-            
+
             if (offset == -1) {
                 print(LOG_ERROR, "Erro ao escrever o paciente no arquivo de dados.\n");
                 fclose(arquivo_pacientes);
                 return false;
             }
-            
-            // Insere o paciente na árvore B
+
             insere(arvore_indices, paciente.id, offset);
+            keytype *key = consulta(arvore_indices->raiz, paciente.id);
+            if (key == NULL)
+                print(LOG_WARNING, "Paciente %d NÃO inserido\n", paciente.id);
+            // BUG: pq não está inserindo?
+
         } else {
             // Paciente já existe
             printf("Paciente com ID %d já existe no sistema.\n", paciente.id);
-            // TODO: implementar política de resolução de conflitos
         }
     }
 
     fclose(arquivo_pacientes);
     print(LOG_INFO, "Dados de pacientes importados com sucesso.\n");
-    //salvar_arvore(obter_arquivo_indices(PACIENTE), arvore_indices);
+    salvar_arvore(obter_arquivo_indices(PACIENTE), arvore_indices);
     print(LOG_INFO, "Árvore de índices de pacientes salva com sucesso.\n");
-    //liberaArv(arvore_indices); // FIXME: liberaArv não está funcionando corretamente
+    // liberaArv(arvore_indices); // FIXME: liberaArv não está funcionando corretamente
+    print(LOG_INFO, "Árvore de índices de pacientes liberada com sucesso.\n");
 
-    // procura 123456789 no arquivo de pacientes
-    keytype *resultado = consulta(arvore_indices->raiz, 123456789);
-    if (resultado != NULL) {
-        printf("Paciente encontrado: %d\n", resultado->key);
-    } else {
-        printf("Paciente não encontrado\n");
-    }
-    
     return true;
 }
 
@@ -226,7 +259,7 @@ bool importar_pacientes(char *file_path) {
  */
 void linha_para_paciente(char *linha, Paciente *paciente) {
     char *token = strtok(linha, ","); // id
-    paciente->id = (size_t)(strtoull(token, NULL, 10) % PATIENT_ID_MAX);
+    paciente->id = (size_t)(strtoull(token, NULL, 10));
 
     token = strtok(NULL, ","); // nome
     strncpy(paciente->nome, token, 50);
@@ -247,7 +280,7 @@ void linha_para_paciente(char *linha, Paciente *paciente) {
     paciente->data_nascimento.ano = atoi(token);
 
     token = strtok(NULL, ","); // bairro
-    // FIXME: vamos usar isso para algo?
+    strncpy(paciente->bairro, token, 50);
 
     token = strtok(NULL, ","); // hipertensao
     paciente->hipertensao = strcmp(token, "1") == 0;

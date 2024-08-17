@@ -73,25 +73,9 @@ bool iniciar_file_manager(bool sobrescrever) {
 }
 
 /**
- * Obtém o índice de um arquivo de acordo com o id e o tipo de entidade fazendo uso do indexador.
- *
- * @param id id da entidade
- * @param tipo tipo da entidade
- *
- * @return índice da entidade no arquivo de dados
- */
-size_t obter_indice_arquivo(size_t id, TipoEntidade tipo) {
-    FILE *arquivo = ARQUIVO_INDICES[tipo];
-    if (arquivo == NULL)
-        return -1;
-
-    return -1; // TODO: Implementar a busca usando árvore B
-}
-
-/**
  * Lê um agendamento do arquivo de dados e retorna um ponteiro para a entidade.
  */
-Agendamento *ler_agendamento(size_t id) {
+Agendamento *ler_agendamento(size_t offset) {
     FILE *arquivo = ARQUIVO_DADOS[AGENDAMENTO];
     if (arquivo == NULL)
         return NULL;
@@ -100,7 +84,7 @@ Agendamento *ler_agendamento(size_t id) {
     if (agendamento == NULL)
         return NULL;
 
-    fseek(arquivo, sizeof(Agendamento), SEEK_SET);
+    fseek(arquivo, offset, SEEK_SET);
     fread(agendamento, sizeof(Agendamento), 1, arquivo);
 
     return agendamento;

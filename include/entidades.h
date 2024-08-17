@@ -40,6 +40,7 @@ typedef struct {
     size_t id;
     char nome[50]; // Nome do paciente
     char sobrenome[50]; // Sobrenome do paciente
+    char bairro[50]; // Sobrenome do paciente
     char genero; // Gênero do paciente (M ou F)
     Timestamp data_nascimento; // Data de nascimento do paciente
     bool hipertensao; // Se o paciente tem hipertensão

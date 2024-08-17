@@ -14,7 +14,7 @@
  */
 
 nodoBTree* criaNodo(int ordem, nodoBTree* pai){
-    nodoBTree* nodo = (nodoBTree*)calloc(1, sizeof(nodoBTree));
+    nodoBTree* nodo = (nodoBTree*)malloc(sizeof(nodoBTree));
     if (nodo == NULL) {
         printf("Falha ao alocar memória para o nodo!\n");
         exit(-1);
@@ -24,13 +24,13 @@ nodoBTree* criaNodo(int ordem, nodoBTree* pai){
     nodo->num = 0;
     nodo->flagfolha = true;
 
-    nodo->keys = (keytype*)calloc((ordem * 2 + 1), sizeof(keytype));
+    nodo->keys = (keytype*)malloc((ordem * 2 + 1) * sizeof(keytype));
     if (nodo->keys == NULL) {
         printf("Falha ao alocar memória!\n");
         exit(-1);
     }
 
-    nodo->filhos = (nodoBTree**)calloc((ordem * 2 + 2), sizeof(nodoBTree*));
+    nodo->filhos = (nodoBTree**)malloc((ordem * 2 + 2) * sizeof(nodoBTree*));
     if (nodo->filhos == NULL) {
         printf("Falha ao alocar memória!\n");
         exit(-1);
@@ -51,7 +51,7 @@ nodoBTree* criaNodo(int ordem, nodoBTree* pai){
 
 bTree* criaArv(int ordem){
 
-    bTree* arv = (bTree*)calloc(1, sizeof(bTree));
+    bTree* arv = (bTree*)malloc(sizeof(bTree));
     if (arv == NULL) {
         printf("Falha ao alocar memória!\n");
         exit(-1);
@@ -106,6 +106,7 @@ void splitNodo(bTree* arv, nodoBTree* esquerdo){
 
     // seleciona chave do meio
     keytype c = esquerdo->keys[ordem];
+    int key = c.key;
 
     // ajeita filhos do pai
 	for(int j = esquerdo->pai->num; j >= index + 1; j--){
@@ -180,6 +181,8 @@ void insereAux(bTree* arv, nodoBTree* nodo, keytype c){
  */
 
 void insere(bTree* arv, int key, int offset){
+    int ordem = arv->ordem;
+
     keytype c;
     c.key = key;
     c.offset = offset;
