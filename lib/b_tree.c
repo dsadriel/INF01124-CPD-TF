@@ -70,34 +70,32 @@ bTree* criaArv(int ordem){
  * @param esquerdo O nodo a ser dividido. Este nodo deve estar cheio.
  */
 
-void splitNodo(bTree* arv, nodoBTree* esquerdo){
-    
+void splitNodo2(bTree* arv, nodoBTree* esquerdo){
+    //printf("inicio\n");
+
     int ordem = arv->ordem;
     int index = esquerdo->index;
+
+    //printf("%d\n",index);
+
     // se entrou aqui, é por que tem 1 elemento a mais do que pode no nodo
     // nodo deve ser dividido em dois e key do meio promovida
-
-    //  nodo sem pai: cria nodo pai (leva ao fim da recursao)
-    if (esquerdo->pai == NULL){
-        nodoBTree* novoPai = criaNodo(ordem, NULL);
-        novoPai->flagfolha = false;
-        novoPai->filhos[0] = esquerdo;
-        arv->raiz = novoPai;
-        esquerdo->pai = novoPai;
-    }
 
     //  cria nodo direito
     nodoBTree* direito= criaNodo(ordem,esquerdo->pai);
     direito->flagfolha = esquerdo->flagfolha;
     direito->num = ordem;
-    
+
     //  nodo direito recebe t maiores valores do esquerdo
 	for(int j = 0; j < ordem; j++){
         direito->keys[j] = esquerdo->keys[j+ordem+1];
+        
 	}
     if(!(direito->flagfolha)){
 		for(int j = 0; j < ordem + 1; j++){
-			direito->filhos[j] = esquerdo->filhos[j+ordem+1];
+			direito->filhos[j] = esquerdo->filhos[j+ordem + 1];
+            direito->filhos[j]->index = j;
+            direito->filhos[j]->pai = direito;
 		}
 	}    
     
@@ -108,29 +106,56 @@ void splitNodo(bTree* arv, nodoBTree* esquerdo){
     keytype c = esquerdo->keys[ordem];
     int key = c.key;
 
-    // ajeita filhos do pai
-	for(int j = esquerdo->pai->num; j >= index + 1; j--){
-        esquerdo->pai->filhos[j]->index++;
-		esquerdo->pai->filhos[j+1] = esquerdo->pai->filhos[j];
-	}
-    
-	// liga-se o novo filho ao pai
-	esquerdo->pai->filhos[index + 1] = direito;
-    direito->index = index+1;
+    //  nodo sem pai: cria nodo pai (leva ao fim da recursao)
+    if (esquerdo->pai == NULL){
+        nodoBTree* novoPai = criaNodo(ordem, NULL);
+        novoPai->flagfolha = false;
+        novoPai->filhos[0] = esquerdo;
+        novoPai->filhos[1] = direito;
+        direito->index=1;
+        novoPai->keys[0] = c;
+        novoPai->num = 1;
+        arv->raiz = novoPai;
+        esquerdo->pai = novoPai;
+        direito->pai = novoPai;
 
-    //  nodo pai recebe o meio 
-	for(int j = esquerdo->pai->num - 1; j >= index; j--){
-		esquerdo->pai->keys[j + 1] = esquerdo->pai->keys[j];
-	}
-
-    esquerdo->pai->keys[index] = c;
-    esquerdo->pai->num++;
-
-    //se pai ficar cheio
-    if (esquerdo->pai->num > 2*ordem){
-        splitNodo(arv, esquerdo->pai);
     }
 
+    else{
+        // ajeita filhos do pai
+        for(int j = esquerdo->pai->num; j >= index + 1; j--){
+            //printf("ok\n");
+            esquerdo->pai->filhos[j+1] = esquerdo->pai->filhos[j];
+            esquerdo->pai->filhos[j]->index = j + 1;
+            
+        }
+        
+        // liga-se o novo filho ao pai
+        esquerdo->pai->filhos[index + 1] = direito;
+        direito->index = index+1;
+        //printf("%d\n",direito->index);
+
+        //  nodo pai recebe o meio 
+        for(int j = esquerdo->pai->num - 1; j >= index; j--){
+            esquerdo->pai->keys[j + 1] = esquerdo->pai->keys[j];
+        }
+        esquerdo->pai->keys[index] = c;
+        esquerdo->pai->num++;
+        // printf("pai num: %d\n",esquerdo->pai->num);
+        // printf("pai num: %d\n",direito->pai->num);
+
+        // // verifica indexes
+        // for(int j = 0; j < direito->pai->num + 1; j++){
+        //     printf("%d\n",direito->pai->filhos[j]->keys[0].key);
+
+        // }
+
+        //se pai ficar cheio
+        //printf("pai num: %d\n",direito->pai->num++);
+        if (esquerdo->pai->num > 2*ordem){
+            splitNodo2(arv, esquerdo->pai);
+        }
+    }
 }
 
 /**
@@ -142,7 +167,7 @@ void splitNodo(bTree* arv, nodoBTree* esquerdo){
  * @param c A chave a ser inserida, representada por um tipo `keytype`.
  */
 
-void insereAux(bTree* arv, nodoBTree* nodo, keytype c){
+void insereAux2(bTree* arv, nodoBTree* nodo, keytype c){
     int key = c.key;
     int i = nodo->num-1;
     int ordem = arv->ordem;
@@ -158,7 +183,7 @@ void insereAux(bTree* arv, nodoBTree* nodo, keytype c){
 
         //se ficar cheio
         if (nodo->num > 2*ordem){
-            splitNodo(arv, nodo);
+            splitNodo2(arv, nodo);
         }
     }
     else{
@@ -166,7 +191,7 @@ void insereAux(bTree* arv, nodoBTree* nodo, keytype c){
         while(i >= 0 && nodo->keys[i].key > key){
             i--;
         }
-        insereAux(arv,nodo->filhos[i+1], c);
+        insereAux2(arv,nodo->filhos[i+1], c);
     }
 
 }
@@ -180,7 +205,7 @@ void insereAux(bTree* arv, nodoBTree* nodo, keytype c){
  * @param offset Um valor associado à chave, representado por um tipo `int`.
  */
 
-void insere(bTree* arv, int key, int offset){
+void insere2(bTree* arv, int key, int offset){
     int ordem = arv->ordem;
 
     keytype c;
@@ -194,11 +219,12 @@ void insere(bTree* arv, int key, int offset){
         arv->raiz->num++;
     }
     else{
-        insereAux(arv, arv->raiz, c);
+        insereAux2(arv, arv->raiz, c);
     }
 
 
 }
+
 
 /**
  * Libera a memória de um nodo da B-tree.
@@ -265,3 +291,5 @@ keytype* consulta(nodoBTree* raiz, int key) {
     // busca no filho
     return consulta(raiz->filhos[i], key);
 }
+
+
