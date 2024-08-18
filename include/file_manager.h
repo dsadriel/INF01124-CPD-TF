@@ -12,7 +12,7 @@ extern FILE *ARQUIVO_INDICES[NUM_ARQUIVOS];
 extern char *NOMES_ARQUIVOS[NUM_ARQUIVOS];
 extern char *NOMES_INDICES[NUM_ARQUIVOS];
 
-bool iniciar_file_manager();
+bool iniciar_file_manager(bool sobrescrever);
 void finalizar_file_manager();
 
 size_t obter_indice_arquivo(size_t id, TipoEntidade tipo);
