@@ -32,49 +32,25 @@ void linha_para_agendamento(char *linha, Agendamento *agendamento);
 bool verificar_cabecalho(FILE *file, char *previsto);
 void obter_nome_arquivo(char *output, TipoEntidade tipo, int argc, char **argv);
 
-
-void imprimeNodoNivel(nodoBTree* nodo, int nivel) { // FIXME: BY CHATGPT, remover
-    if (nodo == NULL) {
-        return;
-    }
-
-    int i;
-    // Primeiro, imprimir os filhos da esquerda
-    for (i = 0; i < nodo->num; i++) {
-        if (!nodo->flagfolha) {
-            imprimeNodoNivel(nodo->filhos[i], nivel + 1);
-        }
-        for(int j = 0; j < nivel; j++) {
-            printf("    ");
-        }
-        printf("%d\n", nodo->keys[i]);
-    }
-
-    // Imprimir o filho da direita
-    if (!nodo->flagfolha) {
-        imprimeNodoNivel(nodo->filhos[i], nivel + 1);
-    }
-}
-
-
 // ============================================================================================== //
 int main(int argc, char **argv) {
 #ifdef _WIN32
     SetConsoleOutputCP(CP_UTF8); // Define o output do console para UTF-8
 #endif
 
-    // if ((argc > 1 && strcmp(argv[1], "-y") != 0) || argc == 1) {
-    //     // AVISO DE SOBRESCRITA
-    //     print(LOG_WARNING,
-    //           "ATENÇÃO: Essa operação irá SOBRESCREVER todos os dados salvos pelo sistema. "
-    //           "Proceda com cuidado\nESCREVA: \"Sim, continuar\" para continuar: ");
-    //     char confirmacao[20] = {0};
-    //     fgets(confirmacao, 20, stdin);
-    //     if (strcmp(confirmacao, "Sim, continuar\n") != 0) {
-    //         printf("Frase de confirmação inválida, saindo do sistema de importação...");
-    //         exit(1);
-    //     }
-    // }
+    if ((argc > 1 && strcmp(argv[1], "-y") != 0) || argc == 1) {
+        // AVISO DE SOBRESCRITA
+        print(LOG_WARNING,
+              "ATENÇÃO: Essa operação irá SOBRESCREVER todos os dados salvos pelo sistema. "
+              "Proceda com cuidado\nESCREVA: \"Sim, continuar\" para continuar: ");
+        char confirmacao[20] = {0};
+        fgets(confirmacao, 20, stdin);
+        if (strcmp(confirmacao, "Sim, continuar\n") != 0) {
+            printf("Frase de confirmação inválida, saindo do sistema de importação...");
+            exit(1);
+        }
+    }
+
     print(LOG_WARNING,
           "Confirmação informada. Autorizado para continuar a SOBRESCRITA dos dados.\n");
 
@@ -151,7 +127,8 @@ bool importar_agendamentos(char *file_path) {
         if (consulta(arvore_indices->raiz, agendamento.id) == NULL) {
             // Agendamento não existe na base de dados
             size_t offset =
-                fappend(&agendamento, sizeof(Agendamento), obter_arquivo_dados(AGENDAMENTO));
+                fappend(&agendamento, sizeof(Agendamento), 
+                obter_arquivo_dados(AGENDAMENTO));
 
             if (offset == -1) {
                 print(LOG_ERROR, "Erro ao escrever o agendamento no arquivo de dados.\n");
