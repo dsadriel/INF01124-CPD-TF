@@ -1,6 +1,6 @@
 #include "arquivo_invertido.h"
 
-// 
+//
 
 /**
  * Cria um arquivo invertido com um número especificado de índices.
@@ -27,7 +27,7 @@ ArquivoInvertido *criaArquivoInvertido(int num_indices, int tamanho_posting, cha
     }
 
     // Inicializa os campos da estrutura
-    ai->__num_indices_max = num_indices; 
+    ai->__num_indices_max = num_indices;
     ai->__tamanho_posting = tamanho_posting;
 
     // Aloca memória para os índices do arquivo invertido
@@ -47,8 +47,37 @@ ArquivoInvertido *criaArquivoInvertido(int num_indices, int tamanho_posting, cha
         return NULL;
     }
 
+    // Escreve a estrutura do arquivo invertido no arquivo
+    salvarArquivoInvertido(ai);
+
     // Retorna o ponteiro para a estrutura criada
     return ai;
+}
+
+/**
+ * Salva a estrutura do arquivo invertido no arquivo de postings.
+ *
+ * @param arquivo Ponteiro para o ArquivoInvertido que será salvo.
+ *
+ */
+bool salvarArquivoInvertido(ArquivoInvertido *arquivo) {
+    // Verifica se o arquivo é nulo
+    if (arquivo == NULL) {
+        print(LOG_ERROR, "Arquivo invertido nulo");
+        return false;
+    }
+
+    // Volta para o início do arquivo de postings
+    fseek(arquivo->arquivo_posting, 0, SEEK_SET);
+
+    // Escreve a estrutura do arquivo invertido no arquivo
+    fwrite(arquivo, sizeof(ArquivoInvertido), 1, arquivo->arquivo_posting);
+
+    // Escreve os índices no arquivo
+    fwrite(arquivo->indices, sizeof(IndiceInvertido), arquivo->__num_indices_max,
+           arquivo->arquivo_posting);
+
+    return true;
 }
 
 /**
@@ -124,18 +153,18 @@ Posting *consultaArquivoInvertido(ArquivoInvertido *arquivo, int chave) {
  */
 IndiceInvertido *__consultaArquivoInvertido(ArquivoInvertido *a, int c, int i, int f) {
     // Verifica se o intervalo de busca é válido
-    if (i < f)
+    if (i > f)
         return NULL;
 
     // Calcula o índice do meio
     int meio = (i + f) / 2;
 
     // Realiza a busca binária
-    if (a->indices[meio].chave < c)
-        return __consultaArquivoInvertido(a, c, i, meio - 1);
+if (a->indices[meio].chave < c)
+    return __consultaArquivoInvertido(a, c, meio + 1, f); 
 
-    if (a->indices[meio].chave > c)
-        return __consultaArquivoInvertido(a, c, meio + 1, f);
+if (a->indices[meio].chave > c)
+    return __consultaArquivoInvertido(a, c, i, meio - 1);
 
     if (a->indices[meio].chave == c)
         return &a->indices[meio];
@@ -153,34 +182,50 @@ IndiceInvertido *__consultaArquivoInvertido(ArquivoInvertido *a, int c, int i, i
  */
 Posting *carregarPosting_Offset(ArquivoInvertido *arquivo, long offset) {
     // Verifica se os ponteiros de entrada são válidos
-    if (arquivo == NULL || offset > 0)
+    if (arquivo == NULL || offset < 0) {
+        print(LOG_ERROR, "Arquivo inválido ou offset negativo");
         return NULL;
+    }
 
     // Aloca memória para o posting
-    Posting *p = calloc(sizeof(Posting), 1);
+    Posting *p = calloc(1, sizeof(Posting));
     if (p == NULL) {
-        print(LOG_ERROR, "Erro ao alocar memória");
+        print(LOG_ERROR, "Erro ao alocar memória para Posting");
+        return NULL;
+    }
+
+    // Vai para o offset do posting no arquivo
+    if (fseek(arquivo->arquivo_posting, offset, SEEK_SET) != 0) {
+        print(LOG_ERROR, "Erro ao mover o ponteiro do arquivo para o offset %ld", offset);
+        free(p);
+        return NULL;
+    }
+
+    // Lê o posting
+    if (fread(p, sizeof(Posting), 1, arquivo->arquivo_posting) != 1) {
+        print(LOG_ERROR, "Erro ao ler o Posting");
+        free(p);
         return NULL;
     }
 
     // Aloca memória para os registros
-    p->registros = calloc(sizeof(keytype), arquivo->__tamanho_posting);
+    p->registros = calloc(arquivo->__tamanho_posting, sizeof(keytype));
     if (p->registros == NULL) {
         print(LOG_ERROR, "Erro ao alocar memória para os registros");
         free(p);
         return NULL;
     }
 
-    // Vai para o offset do posting no arquivo
-    fseek(arquivo->arquivo_posting, offset, SEEK_SET);
-
-    // Lê o posting e seus registros
-    fread(p, sizeof(Posting), 1, arquivo->arquivo_posting);
-    fread(p->registros, sizeof(keytype), arquivo->__tamanho_posting, arquivo->arquivo_posting);
+    // Lê os registros
+    if (fread(p->registros, sizeof(keytype), arquivo->__tamanho_posting, arquivo->arquivo_posting) != arquivo->__tamanho_posting) {
+        print(LOG_ERROR, "Erro ao ler os registros");
+        free(p->registros);
+        free(p);
+        return NULL;
+    }
 
     return p;
 }
-
 /**
  * Carrega um posting e seu próximo, se existir, a partir do arquivo invertido.
  *
@@ -196,11 +241,21 @@ Posting *carregarPosting(ArquivoInvertido *arquivo, IndiceInvertido *indice) {
 
     // Carrega o primeiro posting
     Posting *p = carregarPosting_Offset(arquivo, indice->posting);
+    if (p == NULL) {
+        print(LOG_ERROR, "Erro ao carregar o primeiro posting");
+        return NULL;
+    }
 
     // Carrega o próximo posting, se existir
-    if (p->prox != NULL) {
-        Posting *prox = carregarPosting(arquivo, p->prox);
-        p->prox = prox;
+    Posting *atual = p;
+    while (atual->prox != NULL) {
+        atual->prox = carregarPosting_Offset(arquivo, (long)atual->prox);
+        if (atual->prox == NULL) {
+            print(LOG_ERROR, "Erro ao carregar o próximo posting");
+            liberaPosting(p);
+            return NULL;
+        }
+        atual = atual->prox;
     }
 
     // Retorna o primeiro posting
@@ -233,7 +288,13 @@ bool inserirRegistro(ArquivoInvertido *arquivo, int chave, keytype registro) {
             return false;
         }
 
-        // TODO: Implementar a inserção de um novo índice
+        indice = inserirIndice(arquivo, chave, adicionarPosting(arquivo));
+        if (indice == NULL) {
+            print(LOG_ERROR, "Erro ao inserir novo índice");
+            return false;
+        }
+
+        salvarArquivoInvertido(arquivo);
     }
 
     bool inserido = false;
@@ -245,39 +306,208 @@ bool inserirRegistro(ArquivoInvertido *arquivo, int chave, keytype registro) {
             print(LOG_ERROR, "Erro ao carregar posting");
             return false;
         }
-        
+
         // Busca um espaço vazio no posting
         for (int i = 0; i < arquivo->__tamanho_posting; i++) {
             if (p->registros[i].offset == 0) {
-                p->registros[i] = registro; // Só foi na RAM
+                p->registros[i] = registro;
                 inserido = true;
-                
 
-                // SALVAR NO DISCO
-                break;
+                // Salva o posting no arquivo
+                if (!salvarPosting(arquivo, p, offset)) {
+                    print(LOG_ERROR, "Erro ao salvar posting");
+                    return false;
+                }
+
+                return true;
             }
         }
 
-
-
         // Se existir um próximo posting, carrega o próximo
         if (p->prox != NULL) {
-            offset = carregarPosting_Offset(arquivo, p->prox)->prox;
-            break;
+            offset = (long)carregarPosting_Offset(arquivo, (long)p->prox)->prox;
+        } else {
+
+            // Se não existir um próximo posting, cria um novo
+            long offset_novo = adicionarPosting(arquivo);
+            if (offset_novo == -1) {
+                print(LOG_ERROR, "Erro ao adicionar novo posting");
+                return false;
+            }
+            Posting *p_novo = carregarPosting_Offset(arquivo, offset);
+            p_novo->registros[0] = registro;
+            salvarPosting(arquivo, p_novo, offset_novo);
+
+            // Sobrescreve o próximo offset do posting atual no arquivo
+            fseek(arquivo->arquivo_posting, offset, SEEK_SET); // Vai para o posting atual
+            fwrite(&offset_novo, sizeof(Posting *), 1,
+                   arquivo->arquivo_posting); // Sobrescreve o offset
         }
+    }
+    return true;
+}
 
-        // Se não existir um próximo posting, cria um novo
-        long offset_novo = 1;//adicionarPosting(arquivo);
-        if (offset_novo == -1) {
-            print(LOG_ERROR, "Erro ao adicionar novo posting");
-            return false;
-        }
+/**
+ * Insere um índice no arquivo invertido.
+ *
+ * @param arquivo Ponteiro para o ArquivoInvertido onde o índice será inserido.
+ * @param chave Chave associada ao índice.
+ * @param posting Offset do arquivo onde o posting está armazenado.
+ *
+ * @return Ponteiro para o índice inserido, ou NULL em caso de erro.
+ *
+ */
+IndiceInvertido *inserirIndice(ArquivoInvertido *arquivo, int chave, long posting) {
+    // Verifica se o arquivo é nulo
+    if (arquivo == NULL || chave < 0 || posting < 0) {
+        print(LOG_ERROR, "Parâmetros inválidos");
+        return NULL;
+    }
 
-        // Sobrescreve o próximo offset do posting atual no arquivo
-        fseek(arquivo->arquivo_posting, offset, SEEK_SET); // Vai para o posting atual
-        fwrite(&offset_novo, sizeof(Posting*), 1, arquivo->arquivo_posting); // Sobrescreve o offset
+    // Verifica se o número máximo de índices foi atingido
+    if (arquivo->num_indices >= arquivo->__num_indices_max) {
+        print(LOG_ERROR, "Número máximo de índices atingido");
+        return NULL;
+    }
 
+    // Insere fazendo inserção direta (ordenado)
+    int i = arquivo->num_indices;
+    while (i > 0 && arquivo->indices[i - 1].chave > chave) {
+        arquivo->indices[i] = arquivo->indices[i - 1];
+        i--;
+    }
 
+    // Insere o novo índice
+    IndiceInvertido *indice = &arquivo->indices[i];
+    indice->chave = chave;
+    indice->posting = posting;
+
+    // Incrementa o número de índices
+    arquivo->num_indices++;
+
+    return indice;
+}
+
+/**
+ * Adiciona um posting ao arquivo
+ *
+ * @param arquivo Ponteiro para o ArquivoInvertido onde o posting será adicionado.
+ *
+ * @return Offset do posting no arquivo, ou -1 em caso de erro.
+ */
+long adicionarPosting(ArquivoInvertido *arquivo) {
+    if (arquivo == NULL)
+        return -1;
+
+    fseek(arquivo->arquivo_posting, 0, SEEK_END);
+    long offset = ftell(arquivo->arquivo_posting);
+    Posting p = {0};
+    if (fwrite(&p, sizeof(Posting), 1, arquivo->arquivo_posting) != 1) {
+        return -1;
     }
     
+    // Aloca memória para os registros
+    keytype *registros = calloc(arquivo->__tamanho_posting, sizeof(keytype));
+    if (registros == NULL) {
+        print(LOG_ERROR, "Erro ao alocar memória para os registros");
+        return -1;
+    }
+
+    // Escreve os registros no arquivo
+    if (fwrite(registros, sizeof(keytype), arquivo->__tamanho_posting, arquivo->arquivo_posting) !=
+        arquivo->__tamanho_posting) {
+        free(registros);
+        return -1;
+    }
+
+    free(registros);
+
+    return offset;
+}
+
+/**
+ * Salva um posting no arquivo
+ *
+ * @param arquivo Ponteiro para o ArquivoInvertido onde o posting será salvo.
+ * @param posting Ponteiro para o Posting que será salvo.
+ * @param offset Offset do posting no arquivo.
+ *
+ * @return true se a operação for bem-sucedida, ou false em caso de erro.
+ */
+
+bool salvarPosting(ArquivoInvertido *arquivo, Posting *posting, long offset) {
+    if (posting == NULL)
+        return false;
+
+    fseek(arquivo->arquivo_posting, offset, SEEK_SET);
+
+    // Salva o posting
+    if (fwrite(posting, sizeof(Posting), 1, arquivo->arquivo_posting) != 1) {
+        return false;
+    }
+
+    // Salva os registros
+    if (fwrite(posting->registros, sizeof(keytype), arquivo->__tamanho_posting,
+               arquivo->arquivo_posting) != arquivo->__tamanho_posting) {
+        return false;
+    }
+
+    return true;
+}
+
+/**
+ * Carregar Arquivo Invertido do disco
+ *
+ * @param nome_arquivo Nome do arquivo invertido
+ *
+ * @return Ponteiro para o arquivo invertido carregado, ou NULL em caso de erro.
+ *
+ */
+ArquivoInvertido *carregarArquivoInvertido(char *nome_arquivo) {
+    FILE *arquivo = fopen(nome_arquivo, "rb");
+    if (arquivo == NULL) {
+        print(LOG_ERROR, "Erro ao abrir o arquivo invertido");
+        return NULL;
+    }
+
+    ArquivoInvertido *ai = calloc(sizeof(ArquivoInvertido), 1);
+    if (ai == NULL) {
+        print(LOG_ERROR, "Erro ao alocar memória para o arquivo invertido");
+        fclose(arquivo);
+        return NULL;
+    }
+
+    // Lê o arquivo invertido
+    fread(ai, sizeof(ArquivoInvertido), 1, arquivo);
+
+    // Lê os índices
+    ai->indices = calloc(sizeof(IndiceInvertido), ai->__num_indices_max);
+    if (ai->indices == NULL) {
+        print(LOG_ERROR, "Erro ao alocar memória para os índices");
+        fclose(arquivo);
+        free(ai);
+        return NULL;
+    }
+
+    fread(ai->indices, sizeof(IndiceInvertido), ai->__num_indices_max, arquivo);
+
+    ai->arquivo_posting = arquivo;
+
+    return ai;
+}
+
+/**
+ * Fecha o arquivo invertido
+ *
+ * @param arquivo Ponteiro para o arquivo invertido que será fechado.
+ *
+ * @return true se a operação for bem-sucedida, ou false em caso de erro.
+ */
+bool fecharArquivoInvertido(ArquivoInvertido *arquivo) {
+    if (arquivo == NULL)
+        return true;
+
+    fclose(arquivo->arquivo_posting);
+    liberarArquivoInvertido(arquivo);
+    return true;
 }

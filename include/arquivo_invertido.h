@@ -27,13 +27,20 @@ typedef struct ArquivoInvertido {
 } ArquivoInvertido;
 
 
-ArquivoInvertido *criaArquivoInvertido(int num_indices, int tamanho_posting, char *nome_arquivo);
-bool liberarArquivoInvertido(ArquivoInvertido *arquivo);
-bool liberaPosting(Posting *posting);
-Posting *consultaArquivoInvertido(ArquivoInvertido *arquivo, int chave);
-IndiceInvertido *__consultaArquivoInvertido(ArquivoInvertido *a, int c, int i, int f);
-Posting *carregarPosting_Offset(ArquivoInvertido *arquivo, long offset);
-Posting *carregarPosting(ArquivoInvertido *arquivo, IndiceInvertido *indice);
 
+ArquivoInvertido *criaArquivoInvertido(int num_indices, int tamanho_posting, char *nome_arquivo) ;
+ArquivoInvertido* carregarArquivoInvertido(char *nome_arquivo);
+bool fecharArquivoInvertido(ArquivoInvertido *arquivo);
+bool inserirRegistro(ArquivoInvertido *arquivo, int chave, keytype registro);
+bool liberaPosting(Posting *posting) ;
+bool liberarArquivoInvertido(ArquivoInvertido *arquivo) ;
+bool salvarArquivoInvertido(ArquivoInvertido *arquivo);
+bool salvarPosting(ArquivoInvertido *arquivo, Posting *posting, long offset);
+IndiceInvertido *__consultaArquivoInvertido(ArquivoInvertido *a, int c, int i, int f) ;
+IndiceInvertido *inserirIndice(ArquivoInvertido *arquivo, int chave, long posting);
+long adicionarPosting(ArquivoInvertido *arquivo) ;
+Posting *carregarPosting_Offset(ArquivoInvertido *arquivo, long offset) ;
+Posting *carregarPosting(ArquivoInvertido *arquivo, IndiceInvertido *indice) ;
+Posting *consultaArquivoInvertido(ArquivoInvertido *arquivo, int chave) ;
 
 #endif
