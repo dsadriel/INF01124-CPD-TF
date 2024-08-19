@@ -6,18 +6,16 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#ifdef _WIN32
+#include <windows.h>
+#endif
 
-void atualizar_agendamento(int offset);
-
-/**
- * Atualiza um registro no arquivo de dados.
- *
- * Uso: ./buscar <-a | -p> <id>
- */
 int main(int argc, char const *argv[]) {
-
+#ifdef _WIN32
+    SetConsoleOutputCP(CP_UTF8); // Define o output do console para UTF-8
+#endif
     if (argc < 3) {
-        print(LOG_ERROR, "Uso: %s <-a | -p | -m | -r> <id>\n", argv[0]);
+        print(LOG_ERROR, "Uso: %s <-a | -p> <id>\n", argv[0]);
         return 1;
     }
 
@@ -44,7 +42,6 @@ int main(int argc, char const *argv[]) {
 
     // Carrega a árvore B do arquivo de índices
     bTree *arvore = carregar_arvore(obter_arquivo_indices(tipo));
-    printf("Arvore: %d\n", arvore->raiz->keys[0].key);
     if (arvore == NULL) {
         print(LOG_ERROR, "Erro ao carregar a árvore B do arquivo de índices\n");
         return 1;
@@ -64,7 +61,7 @@ int main(int argc, char const *argv[]) {
     switch (tipo) {
     case AGENDAMENTO:
         printf(YELLOW "AGENDAMENTO:\n" RESET);
-        registro = ler_agendamento(offset);
+        registro = ler_agendamento_disco(offset);
         imprimir(AGENDAMENTO, registro);
 
         liberaArv(arvore);
@@ -78,8 +75,8 @@ int main(int argc, char const *argv[]) {
         }
         offset = key->offset;
     case PACIENTE:
-        printf(YELLOW "PACIENTE:\n" RESET );
-        registro = ler_paciente(offset);
+        printf(YELLOW "PACIENTE:\n" RESET);
+        registro = ler_paciente_disco(offset);
         imprimir(PACIENTE, registro);
         break;
     case MEDICO:

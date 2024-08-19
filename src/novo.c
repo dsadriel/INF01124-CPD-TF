@@ -6,19 +6,16 @@
 #include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <time.h>
+#include <limits.h>
 
-void atualizar_agendamento(int offset);
-void atualizar_paciente(size_t offset);
+size_t novo_agendamento(bTree *arvore);
+size_t novo_paciente(bTree *arvore);
 
-/**
- * Atualiza um registro no arquivo de dados.
- *
- * Uso: ./atualizar_registro <-a | -p | -m | -r> <id>
- */
 int main(int argc, char const *argv[]) {
 
-    if (argc < 3) {
-        print(LOG_ERROR, "Uso: %s <-a | -p | -m | -r> <id>\n", argv[0]);
+    if (argc < 2) {
+        print(LOG_ERROR, "Uso: %s <-a | -p>\n", argv[0]);
         return 1;
     }
 
@@ -28,10 +25,10 @@ int main(int argc, char const *argv[]) {
         tipo = AGENDAMENTO;
     } else if (strcmp(argv[1], "-p") == 0) {
         tipo = PACIENTE;
-    } else if (strcmp(argv[1], "-m") == 0) {
-        tipo = MEDICO;
-    } else if (strcmp(argv[1], "-r") == 0) {
-        tipo = RELATORIO;
+    // } else if (strcmp(argv[1], "-m") == 0) {
+    //     tipo = MEDICO;
+    // } else if (strcmp(argv[1], "-r") == 0) {
+    //     tipo = RELATORIO;
     } else {
         print(LOG_ERROR, "Tipo de entidade inválido: %s\n", argv[1]);
         return 1;
@@ -45,91 +42,78 @@ int main(int argc, char const *argv[]) {
 
     // Carrega a árvore B do arquivo de índices
     bTree *arvore = carregar_arvore(obter_arquivo_indices(tipo));
-    printf("Arvore: %d\n", arvore->raiz->keys[0].key);
     if (arvore == NULL) {
         print(LOG_ERROR, "Erro ao carregar a árvore B do arquivo de índices\n");
         return 1;
     }
 
-    // Busca o registro
-    keytype *key = consulta(arvore->raiz, atoi(argv[2]));
-    if (key == NULL) {
-        print(LOG_ERROR, "Registro não encontrado.\n");
-        return 1;
-    }
-    int offset = key->offset;
-
-    // Solicita a atualização do registro
+    size_t id = -1;
     switch (tipo) {
     case AGENDAMENTO:
-        atualizar_agendamento(offset);
+        id = novo_agendamento(arvore);
         break;
     case PACIENTE:
-        atualizar_paciente(offset);
-        break;
-    case MEDICO:
-        // atualizar_medico(offset);
-        break;
-    case RELATORIO:
-        // atualizar_relatorio(offset);
+        id = novo_paciente(arvore);
         break;
     default:
         break;
     }
 
+    print(LOG_SUCCESS, "Registro criado com sucesso. ID: %u\n", id);
+
     return 0;
 }
 
+
 /**
- * Atualiza um registro de agendamento.
- *
- * @param offset Offset do registro no arquivo de dados
+ * Cria um novo agendamento com base nos dados fornecidos pelo usuário e o adiciona ao arquivo de dados
+ * 
+ * @param bTree *arvore de índices
+ * 
+ * @return ID do agendamento
  */
-void atualizar_agendamento(int offset) {
-    Agendamento *agendamento = ler_agendamento(offset);
-    if (agendamento == NULL) {
-        print(LOG_ERROR, "Erro ao ler o registro de agendamento\n");
-        return;
+size_t novo_agendamento(bTree *arvore) {
+
+    Agendamento ag = {0};
+
+    ler_entidade(AGENDAMENTO, &ag);
+    
+    ag.id = clock() % UINT_MAX;
+    // Verifica se o ID já existe na árvore
+    while(consulta(arvore->raiz, ag.id) != NULL) {
+        ag.id = clock() % UINT_MAX;
     }
 
-    // Solicita a atualização dos campos
-    print(LOG_INFO, "Registro atual:\n");
-    imprimir(AGENDAMENTO, agendamento);
+    // Adiciona o registro ao arquivo de dados
+    size_t offset = fappend(&ag, sizeof(Agendamento), obter_arquivo_dados(AGENDAMENTO));
+    insere(arvore, ag.id, offset);
+    salvar_arvore( obter_arquivo_indices(AGENDAMENTO), arvore);
 
-    // Recebe os novos dados do agendamento
-    ler_entidade(AGENDAMENTO, agendamento);
-
-    // Atualiza o registro
-    // FIXME: Atualizar os demais indexadores
-    FILE *arquivo = obter_arquivo_dados(AGENDAMENTO);
-    fseek(arquivo, offset, SEEK_SET);
-    fwrite(agendamento, sizeof(Agendamento), 1, arquivo);
-
-    print(LOG_INFO, "Registro atualizado com sucesso\n");
-
-    free(agendamento);
+    return ag.id;
 }
 
+/**
+ * Cria um novo paciente com base nos dados fornecidos pelo usuário e o adiciona ao arquivo de dados
+ * 
+ * @param bTree *arvore de índices
+ */
 
-void atualizar_paciente(size_t offset){
-    Paciente *paciente = ler_paciente(offset);
-    if (paciente == NULL) {
-        print(LOG_ERROR, "Erro ao ler o registro de paciente\n");
-        return;
+size_t novo_paciente(bTree *arvore) {
+
+    Paciente paciente = {0};
+
+    ler_entidade(PACIENTE, &paciente);
+
+    paciente.id = clock() % UINT_MAX;
+    // Verifica se o ID já existe na árvore
+    while(consulta(arvore->raiz, paciente.id) != NULL) {
+        paciente.id = clock() % UINT_MAX;
     }
 
-    // Solicita a atualização dos campos
-    print(LOG_INFO, "Registro atual:\n");
-    imprimir(PACIENTE, paciente);
+    // Adiciona o registro ao arquivo de dados
+    size_t offset = fappend(&paciente, sizeof(Paciente), obter_arquivo_dados(PACIENTE));
+    insere(arvore, paciente.id, offset);
+    salvar_arvore( obter_arquivo_indices(PACIENTE), arvore);
 
-    // Recebe os novos dados do paciente
-    ler_entidade(PACIENTE, paciente);
-
-    // Atualiza o registro
-    // FIXME: Atualizar os demais indexadores
-    FILE *arquivo = obter_arquivo_dados(PACIENTE);
-    fseek(arquivo, offset, SEEK_SET);
-    fwrite(paciente, sizeof(Paciente), 1, arquivo);
-
-    print(LOG_INFO, "Registro atualizado com sucesso\n");
+    return paciente.id;
 }

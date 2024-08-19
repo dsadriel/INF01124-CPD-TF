@@ -104,7 +104,7 @@ void splitNodo2(bTree* arv, nodoBTree* esquerdo){
 
     // seleciona chave do meio
     keytype c = esquerdo->keys[ordem];
-    int key = c.key;
+    //int key = c.key;
 
     //  nodo sem pai: cria nodo pai (leva ao fim da recursao)
     if (esquerdo->pai == NULL){
@@ -205,8 +205,8 @@ void insereAux2(bTree* arv, nodoBTree* nodo, keytype c){
  * @param offset Um valor associado à chave, representado por um tipo `int`.
  */
 
-void insere2(bTree* arv, int key, int offset){
-    int ordem = arv->ordem;
+void insere(bTree* arv, int key, int offset){
+    //int ordem = arv->ordem;
 
     keytype c;
     c.key = key;

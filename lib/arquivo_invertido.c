@@ -107,17 +107,12 @@ bool liberarArquivoInvertido(ArquivoInvertido *arquivo) {
  * @return true se a operação for bem-sucedida, ou false em caso de erro.
  */
 bool liberaPosting(Posting *posting) {
-    // Verifica se o posting é nulo
-    if (posting == NULL)
-        return true;
-
-    // Libera o próximo posting, se existir
-    if (posting->prox != NULL)
-        liberaPosting(posting->prox);
-
-    // Libera os registros e o próprio posting
-    free(posting->registros);
-    free(posting);
+    while (posting != NULL) {
+        Posting *prox = posting->prox;
+        free(posting->registros);
+        free(posting);
+        posting = prox;
+    }
     return true;
 }
 
@@ -160,14 +155,13 @@ IndiceInvertido *__consultaArquivoInvertido(ArquivoInvertido *a, int c, int i, i
     int meio = (i + f) / 2;
 
     // Realiza a busca binária
-if (a->indices[meio].chave < c)
-    return __consultaArquivoInvertido(a, c, meio + 1, f); 
+    if (a->indices[meio].chave < c)
+        return __consultaArquivoInvertido(a, c, meio + 1, f);
 
-if (a->indices[meio].chave > c)
-    return __consultaArquivoInvertido(a, c, i, meio - 1);
+    if (a->indices[meio].chave > c)
+        return __consultaArquivoInvertido(a, c, i, meio - 1);
 
-    if (a->indices[meio].chave == c)
-        return &a->indices[meio];
+    return &a->indices[meio];
 
     return NULL;
 }
@@ -207,7 +201,12 @@ Posting *carregarPosting_Offset(ArquivoInvertido *arquivo, long offset) {
         free(p);
         return NULL;
     }
-
+    
+    if(arquivo->__tamanho_posting < 0){
+        print(LOG_ERROR, "Tamanho do posting inválido");
+        free(p);
+        return NULL;
+    }
     // Aloca memória para os registros
     p->registros = calloc(arquivo->__tamanho_posting, sizeof(keytype));
     if (p->registros == NULL) {
@@ -217,7 +216,8 @@ Posting *carregarPosting_Offset(ArquivoInvertido *arquivo, long offset) {
     }
 
     // Lê os registros
-    if (fread(p->registros, sizeof(keytype), arquivo->__tamanho_posting, arquivo->arquivo_posting) != arquivo->__tamanho_posting) {
+    if (fread(p->registros, sizeof(keytype), arquivo->__tamanho_posting,
+              arquivo->arquivo_posting) != arquivo->__tamanho_posting) {
         print(LOG_ERROR, "Erro ao ler os registros");
         free(p->registros);
         free(p);
@@ -281,6 +281,7 @@ bool inserirRegistro(ArquivoInvertido *arquivo, int chave, keytype registro) {
 
     // Verifica se já existe um índice para a chave
     IndiceInvertido *indice = __consultaArquivoInvertido(arquivo, chave, 0, arquivo->num_indices);
+    
     if (indice == NULL) {
         // Cria um novo índice
         if (arquivo->num_indices >= arquivo->__num_indices_max) {
@@ -301,40 +302,49 @@ bool inserirRegistro(ArquivoInvertido *arquivo, int chave, keytype registro) {
     long offset = indice->posting;
 
     while (!inserido) {
+        // Carrega o posting atual
         Posting *p = carregarPosting_Offset(arquivo, offset);
         if (p == NULL) {
             print(LOG_ERROR, "Erro ao carregar posting");
-            return false;
+            break; // Sai do while
         }
 
         // Busca um espaço vazio no posting
         for (int i = 0; i < arquivo->__tamanho_posting; i++) {
-            if (p->registros[i].offset == 0) {
+            if (p->registros[i].key == 0) {
                 p->registros[i] = registro;
                 inserido = true;
 
                 // Salva o posting no arquivo
                 if (!salvarPosting(arquivo, p, offset)) {
                     print(LOG_ERROR, "Erro ao salvar posting");
-                    return false;
+                    liberaPosting(p);
+                    break;
                 }
 
-                return true;
+                // Libera a memória alocada para o posting
+                liberaPosting(p);
+                break;
             }
         }
 
+        if (inserido)
+            break; // Sai do while
+
         // Se existir um próximo posting, carrega o próximo
         if (p->prox != NULL) {
-            offset = (long)carregarPosting_Offset(arquivo, (long)p->prox)->prox;
+            offset = (long)p->prox;
+            //liberaPosting(p);
         } else {
-
             // Se não existir um próximo posting, cria um novo
             long offset_novo = adicionarPosting(arquivo);
             if (offset_novo == -1) {
                 print(LOG_ERROR, "Erro ao adicionar novo posting");
-                return false;
+                liberaPosting(p);
+                break;
             }
-            Posting *p_novo = carregarPosting_Offset(arquivo, offset);
+
+            Posting *p_novo = carregarPosting_Offset(arquivo, offset_novo);
             p_novo->registros[0] = registro;
             salvarPosting(arquivo, p_novo, offset_novo);
 
@@ -342,9 +352,18 @@ bool inserirRegistro(ArquivoInvertido *arquivo, int chave, keytype registro) {
             fseek(arquivo->arquivo_posting, offset, SEEK_SET); // Vai para o posting atual
             fwrite(&offset_novo, sizeof(Posting *), 1,
                    arquivo->arquivo_posting); // Sobrescreve o offset
+
+            // Libera a memória alocada para o posting
+            liberaPosting(p_novo);
+            liberaPosting(p);
+            inserido = true;
+
+            break;
         }
     }
-    return true;
+
+    free(indice);
+    return inserido;
 }
 
 /**
@@ -405,7 +424,7 @@ long adicionarPosting(ArquivoInvertido *arquivo) {
     if (fwrite(&p, sizeof(Posting), 1, arquivo->arquivo_posting) != 1) {
         return -1;
     }
-    
+
     // Aloca memória para os registros
     keytype *registros = calloc(arquivo->__tamanho_posting, sizeof(keytype));
     if (registros == NULL) {
