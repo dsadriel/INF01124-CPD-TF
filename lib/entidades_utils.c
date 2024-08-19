@@ -1,6 +1,7 @@
 
 #include "entidades_utils.h"
 #include <time.h>
+#include <string.h>
 
 void parse_date(char *date, Timestamp *tm) {
     sscanf(date, "%d-%d-%dT%d:%d", &tm->ano, &tm->mes, &tm->dia, &tm->hora, &tm->minuto);
@@ -109,10 +110,12 @@ void ler_entidade(TipoEntidade tipo, void *entidade) {
 
 void __ler_paciente(Paciente *paciente) {
     printf("Nome: ");
-    scanf("%50s", paciente->nome);
+    fgets(paciente->nome, 50, stdin);
+    paciente->nome[strcspn(paciente->nome, "\n")] = 0;
 
     printf("Sobrenome: ");
-    scanf("%50s", paciente->sobrenome);
+    fgets(paciente->sobrenome, 50, stdin);
+    paciente->sobrenome[strcspn(paciente->sobrenome, "\n")] = 0;
 
     printf("Gênero (M ou F): ");
     scanf(" %c", &paciente->genero);

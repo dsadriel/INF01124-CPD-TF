@@ -75,7 +75,7 @@ bool iniciar_file_manager(bool sobrescrever) {
 /**
  * Lê um agendamento do arquivo de dados e retorna um ponteiro para a entidade.
  */
-Agendamento *ler_agendamento(size_t offset) {
+Agendamento *ler_agendamento_disco(size_t offset) {
     FILE *arquivo = ARQUIVO_DADOS[AGENDAMENTO];
     if (arquivo == NULL)
         return NULL;
@@ -98,7 +98,7 @@ Agendamento *ler_agendamento(size_t offset) {
  * @return ponteiro para o paciente
  * @return NULL se não foi possível ler o paciente
  */
-Paciente *ler_paciente(size_t offset) {
+Paciente *ler_paciente_disco(size_t offset) {
     FILE *arquivo = ARQUIVO_DADOS[PACIENTE];
     if (arquivo == NULL)
         return NULL;

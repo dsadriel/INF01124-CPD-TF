@@ -10,11 +10,6 @@
 void atualizar_agendamento(int offset);
 void atualizar_paciente(size_t offset);
 
-/**
- * Atualiza um registro no arquivo de dados.
- *
- * Uso: ./atualizar_registro <-a | -p | -m | -r> <id>
- */
 int main(int argc, char const *argv[]) {
 
     if (argc < 3) {
@@ -28,10 +23,10 @@ int main(int argc, char const *argv[]) {
         tipo = AGENDAMENTO;
     } else if (strcmp(argv[1], "-p") == 0) {
         tipo = PACIENTE;
-    } else if (strcmp(argv[1], "-m") == 0) {
-        tipo = MEDICO;
-    } else if (strcmp(argv[1], "-r") == 0) {
-        tipo = RELATORIO;
+    // } else if (strcmp(argv[1], "-m") == 0) {
+    //     tipo = MEDICO;
+    // } else if (strcmp(argv[1], "-r") == 0) {
+    //     tipo = RELATORIO;
     } else {
         print(LOG_ERROR, "Tipo de entidade inválido: %s\n", argv[1]);
         return 1;
@@ -45,7 +40,7 @@ int main(int argc, char const *argv[]) {
 
     // Carrega a árvore B do arquivo de índices
     bTree *arvore = carregar_arvore(obter_arquivo_indices(tipo));
-    printf("Arvore: %d\n", arvore->raiz->keys[0].key);
+
     if (arvore == NULL) {
         print(LOG_ERROR, "Erro ao carregar a árvore B do arquivo de índices\n");
         return 1;
@@ -86,7 +81,7 @@ int main(int argc, char const *argv[]) {
  * @param offset Offset do registro no arquivo de dados
  */
 void atualizar_agendamento(int offset) {
-    Agendamento *agendamento = ler_agendamento(offset);
+    Agendamento *agendamento = ler_agendamento_disco(offset);
     if (agendamento == NULL) {
         print(LOG_ERROR, "Erro ao ler o registro de agendamento\n");
         return;
@@ -95,6 +90,8 @@ void atualizar_agendamento(int offset) {
     // Solicita a atualização dos campos
     print(LOG_INFO, "Registro atual:\n");
     imprimir(AGENDAMENTO, agendamento);
+
+    print(LOG_INFO, "Digite os novos dados do agendamento\n");
 
     // Recebe os novos dados do agendamento
     ler_entidade(AGENDAMENTO, agendamento);
@@ -112,7 +109,7 @@ void atualizar_agendamento(int offset) {
 
 
 void atualizar_paciente(size_t offset){
-    Paciente *paciente = ler_paciente(offset);
+    Paciente *paciente = ler_paciente_disco(offset);
     if (paciente == NULL) {
         print(LOG_ERROR, "Erro ao ler o registro de paciente\n");
         return;
@@ -121,6 +118,8 @@ void atualizar_paciente(size_t offset){
     // Solicita a atualização dos campos
     print(LOG_INFO, "Registro atual:\n");
     imprimir(PACIENTE, paciente);
+
+    print(LOG_INFO, "Digite os novos dados do paciente\n");
 
     // Recebe os novos dados do paciente
     ler_entidade(PACIENTE, paciente);

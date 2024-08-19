@@ -1,0 +1,1 @@
+compile importar && compile consulta && compile editar && compile novo

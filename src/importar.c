@@ -1,8 +1,7 @@
-#include "b_tree.h"
 #include "b_tree_disc.h"
-#include "entidades.h"
 #include "entidades_utils.h"
 #include "file_manager.h"
+#include "arquivo_invertido.h"
 #include "utils.h"
 #include <stdio.h>
 #include <stdlib.h>
@@ -14,8 +13,8 @@
 #define MAX_LINE_LENGTH 300
 #define FILE_NAME_LENGTH 100
 #define PATIENT_ID_MAX 4294967295
-#define ORDEM_ARVORE_PACIENTES 10
-#define ORDEM_ARVORE_AGENDAMENTOS 1
+#define ORDEM_ARVORE_PACIENTES 50 // Ordem da árvore B de pacientes
+#define ORDEM_ARVORE_AGENDAMENTOS 100 // Ordem da árvore B de agendamentos
 
 #define CABECALHO_AGENDAMENTOS                                                                     \
     "PatientId,AppointmentID,Gender,ScheduledDay,AppointmentDay,Age,Neighbourhood,Scholarship,"    \
@@ -116,9 +115,9 @@ bool importar_agendamentos(char *file_path) {
     printf("Importando dados de AGENDAMENTOS do arquivo %s...\n", file_path);
 
     bTree *arvore_indices = criaArv(ORDEM_ARVORE_AGENDAMENTOS);
+    // FIXME: não está funcionando
+    //ArquivoInvertido *ai_data = criaArquivoInvertido(1000, 50, "./data/agendamentos_data.inverted");
     char linha[MAX_LINE_LENGTH] = {0};
-
-    int qtde = 0;
 
     while (fgets(linha, MAX_LINE_LENGTH, arquivo_agendamentos) != NULL) {
         Agendamento agendamento = {0};
@@ -139,30 +138,24 @@ bool importar_agendamentos(char *file_path) {
 
             // Insere o agendamento na árvore B
             insere(arvore_indices, agendamento.id, offset);
-            keytype *key = consulta(arvore_indices->raiz, agendamento.id);
-            if (key == NULL) {
-                print(LOG_WARNING, "Agendamento %d NÃO inserido\n", agendamento.id);
-                printf("Qtde: %d\n\n", qtde);
-                imprimeNodoNivel(arvore_indices->raiz, 0);
-                exit(1);
-    
-            } else {
-                qtde++;
-            }
-            // BUG: pq não está inserindo?
+        
+            // // Insere o agendamento no arquivo invertido de datas FIXME: não está funcionando
+            // int data = agendamento.data_consulta.dia + agendamento.data_consulta.mes * 100 + agendamento.data_consulta.ano * 10000;
 
-            // FIXME: Atualizar os demais indexadores
+            // inserirRegistro(ai_data, data, (keytype) {agendamento.id, offset});
+            
         } else {
             // Agendamento já existe
             printf("Agendamento com ID %d já existe no sistema.\n", agendamento.id);
         }
-    }
+    } 
 
+    //fecharArquivoInvertido(ai_data); // FIXME: não está funcionando
     fclose(arquivo_agendamentos);
     print(LOG_INFO, "Dados de agendamentos importados com sucesso.\n");
     salvar_arvore(obter_arquivo_indices(AGENDAMENTO), arvore_indices);
     print(LOG_INFO, "Árvore de índices de agendamentos salva com sucesso.\n");
-    // liberaArv(arvore_indices); // FIXME: liberaArv não está funcionando corretamente
+    liberaArv(arvore_indices); // FIXME: liberaArv não está funcionando corretamente
     print(LOG_INFO, "Árvore de índices de agendamentos liberada com sucesso.\n");
     return true;
 }
@@ -204,12 +197,10 @@ bool importar_pacientes(char *file_path) {
                 return false;
             }
 
+            // Insere o paciente na árvore B
             insere(arvore_indices, paciente.id, offset);
-            keytype *key = consulta(arvore_indices->raiz, paciente.id);
-            if (key == NULL)
-                print(LOG_WARNING, "Paciente %d NÃO inserido\n", paciente.id);
-            // BUG: pq não está inserindo?
-
+            
+            // TODO: Inserir no arquivo invertido de bairros
         } else {
             // Paciente já existe
             printf("Paciente com ID %d já existe no sistema.\n", paciente.id);
@@ -236,7 +227,10 @@ bool importar_pacientes(char *file_path) {
  */
 void linha_para_paciente(char *linha, Paciente *paciente) {
     char *token = strtok(linha, ","); // id
-    paciente->id = (size_t)(strtoull(token, NULL, 10));
+    paciente->id = (size_t)(atoi(token));
+    if(paciente->id < 0 ) {
+        printf("ID inválido\n");
+    }
 
     token = strtok(NULL, ","); // nome
     strncpy(paciente->nome, token, 50);
