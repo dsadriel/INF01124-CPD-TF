@@ -1,92 +1,90 @@
-#include "arquivo_invertido.h"
 #include "b_tree_disc.h"
-#include "entidades.h"
 #include "entidades_utils.h"
 #include "file_manager.h"
 #include "utils.h"
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
 
-#define PAGE_SIZE 10
+#define ITEM_POR_PAGINA 20
 
-int main(int argc, char const *argv[]) {
-    printf("Não implementado\n");
-    exit(-1);
+void listar_pacientes();
+void listar_agendamentos();
 
-    if (argc < 2 || strcmp(argv[1], "-d") != 0) {
-        print(LOG_ERROR, "Uso: %s -d DD/MM/AAAA\n", argv[0]);
-        return 1;
+int main(int argc, char *argv[]) {
+    if (tem_argumento(argc, argv, "-h") || tem_argumento(argc, argv, "--help") || argc < 2) {
+        printf("Uso: %s <-a | -p>\n", argv[0]);
+        printf("  -a: Lista todos os agendamentos\n");
+        printf("  -p: Lista todos os pacientes\n");
+        return 0;
     }
 
-    // Inicializa o file manager
-    if (!iniciar_file_manager(false)) {
-        print(LOG_ERROR, "Erro ao inicializar o file manager\n");
+    // Verifica o tipo de entidade
+    if (strcmp(argv[1], "-a") == 0) {
+        listar_agendamentos();
+    } else if (strcmp(argv[1], "-p") == 0) {
+        listar_pacientes();
+    } else {
+        print(LOG_ERROR, "Tipo de entidade inválido: %s\n", argv[1]);
         return 1;
     }
+}
 
-    // Define a data a ser buscada
-    int dia, mes, ano;
-    sscanf(argv[2], "%2d/%2d/%4d", &dia, &mes, &ano);
+void listar_pacientes() {
+    FILE *arquivo = obter_arquivo_dados(PACIENTE, false);
 
-    int data = (ano * 10000) + (mes * 100) + dia;
-    if (data < 0 || data > 99999999) {
-        print(LOG_ERROR, "Data inválida\n");
-        return 1;
+    if (arquivo == NULL) {
+        print(LOG_ERROR, "Erro ao abrir o arquivo de pacientes\n");
+        return;
     }
-
-    printf("Data: %d\n", data);
-
-    // Carrega a árvore B do arquivo de índices
-    bTree *arvore_pacientes = carregar_arvore(obter_arquivo_indices(PACIENTE));
-
-    // Carrega o arquivo invertido
-    ArquivoInvertido *arquivo = carregarArquivoInvertido("./data/agendamentos_data.inverted");
-
-    // Busca a data no arquivo invertido
-    Posting *posting = consultaArquivoInvertido(arquivo, data);
 
     char continuar = 's';
-    int ultimo_exibido = 0;
-    while (continuar == 's') {
-        if (posting == NULL) {
-            printf("Nenhum registro para exibir\n");
-            return 1;
+    Paciente pacientes[ITEM_POR_PAGINA];
+
+    while (continuar == 's' && !feof(arquivo)) {
+        int lidos = fread(pacientes, sizeof(Paciente), ITEM_POR_PAGINA, arquivo);
+
+        printf("ID | Nome completo | Gênero | Data de nascimento | Hipertensão | Diabetes | "
+               "Alcoolismo\n");
+        for (int i = 0; i < lidos; i++) {
+            imprimir_linha(PACIENTE, &pacientes[i]);
         }
 
-        printf(" Agendamento | Paciente\n");
-        while (ultimo_exibido % PAGE_SIZE != 0 && posting != NULL) {
-            int i = ultimo_exibido++;
-
-            if (ultimo_exibido >= arquivo->__num_indices_max) {
-                ultimo_exibido = 0;
-                if (posting->prox == NULL) {
-                    printf("Fim dos registros\n");
-                    return 0;
-                } else {
-                    Posting *aux = posting;
-                    posting = posting->prox;
-                    free(aux);
-                }
-            }
-
-            Agendamento *ag = ler_agendamento_disco(posting->registros[i].offset);
-            int offset_paciente = consulta(arvore_pacientes->raiz, ag->id_paciente)->offset;
-            if (offset_paciente == -1) {
-                printf("Paciente não encontrado\n");
-                return 1;
-            }
-            Paciente *pac = ler_paciente_disco(offset_paciente);
-
-            printf(" %11d | %s\n", ag->id, pac->nome);
+        if (lidos < ITEM_POR_PAGINA) {
+            break;
+        } else {
+            do {
+                printf("Deseja exibir mais %d registros? (s/n): ", ITEM_POR_PAGINA);
+                scanf(" %c", &continuar);
+            } while (continuar != 's' && continuar != 'n');
         }
-
-        printf("Deseja exibir a próxima página? (s/n)");
-        continuar = getchar();
-        fflush(stdin);
-        Posting *aux = posting;
-        posting = posting->prox;
-        free(aux);
     }
-    return 0;
+}
+
+void listar_agendamentos() {
+    FILE *arquivo = obter_arquivo_dados(AGENDAMENTO, false);
+
+    if (arquivo == NULL) {
+        print(LOG_ERROR, "Erro ao abrir o arquivo de agendamentos\n");
+        return;
+    }
+
+    char continuar = 's';
+    Agendamento agendamentos[ITEM_POR_PAGINA];
+
+    while (continuar == 's' && !feof(arquivo)) {
+        int lidos = fread(agendamentos, sizeof(Agendamento), ITEM_POR_PAGINA, arquivo);
+
+        printf("ID | ID Paciente | ID Médico | Data de agendamento | Data da consulta | Paciente "
+               "compareceu | ID relatório\n");
+        for (int i = 0; i < lidos; i++) {
+            imprimir_linha(AGENDAMENTO, &agendamentos[i]);
+        }
+
+        if (lidos < ITEM_POR_PAGINA) {
+            break;
+        } else {
+            do {
+                printf("Deseja exibir mais %d registros? (s/n): ", ITEM_POR_PAGINA);
+                scanf(" %c", &continuar);
+            } while (continuar != 's' && continuar != 'n');
+        }
+    }
 }

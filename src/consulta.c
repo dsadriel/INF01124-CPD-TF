@@ -10,14 +10,18 @@
 #include <windows.h>
 #endif
 
-int main(int argc, char const *argv[]) {
+int main(int argc, char *argv[]) {
 #ifdef _WIN32
     SetConsoleOutputCP(CP_UTF8); // Define o output do console para UTF-8
 #endif
-    if (argc < 3) {
-        print(LOG_ERROR, "Uso: %s <-a | -p> <id>\n", argv[0]);
-        return 1;
+
+    if(tem_argumento(argc, argv, "-h") || tem_argumento(argc, argv, "--help") || argc < 3) {
+        printf("Uso: %s <-a | -p > <id>\n", argv[0]);
+        printf("  -a: Consulta um agendamento\n");
+        printf("  -p: Consulta um paciente\n");
+        return 0;
     }
+
 
     // Verifica o tipo de entidade
     TipoEntidade tipo;
@@ -25,23 +29,18 @@ int main(int argc, char const *argv[]) {
         tipo = AGENDAMENTO;
     } else if (strcmp(argv[1], "-p") == 0) {
         tipo = PACIENTE;
-    } else if (strcmp(argv[1], "-m") == 0) {
-        tipo = MEDICO;
-    } else if (strcmp(argv[1], "-r") == 0) {
-        tipo = RELATORIO;
+    // } else if (strcmp(argv[1], "-m") == 0) {
+    //     tipo = MEDICO;
+    // } else if (strcmp(argv[1], "-r") == 0) {
+    //     tipo = RELATORIO;
     } else {
         print(LOG_ERROR, "Tipo de entidade inválido: %s\n", argv[1]);
         return 1;
     }
 
-    // Inicializa o file manager
-    if (!iniciar_file_manager(false)) {
-        print(LOG_ERROR, "Erro ao inicializar o file manager\n");
-        return 1;
-    }
 
     // Carrega a árvore B do arquivo de índices
-    bTree *arvore = carregar_arvore(obter_arquivo_indices(tipo));
+    bTree *arvore = carregar_arvore(obter_arquivo_indices(tipo, false));
     if (arvore == NULL) {
         print(LOG_ERROR, "Erro ao carregar a árvore B do arquivo de índices\n");
         return 1;
@@ -65,7 +64,7 @@ int main(int argc, char const *argv[]) {
         imprimir(AGENDAMENTO, registro);
 
         liberaArv(arvore);
-        arvore = carregar_arvore(obter_arquivo_indices(PACIENTE));
+        arvore = carregar_arvore(obter_arquivo_indices(PACIENTE, false));
         key = consulta(arvore->raiz, ((Agendamento *)registro)->id_paciente);
 
         free(registro);

@@ -3,6 +3,7 @@
 
 
 #include <stdio.h>
+#include <string.h>
 #include "entidades.h"
 
 void parse_date(char *date, Timestamp *tm);
