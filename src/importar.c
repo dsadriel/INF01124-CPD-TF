@@ -1,7 +1,7 @@
+#include "arquivo_invertido.h"
 #include "b_tree_disc.h"
 #include "entidades_utils.h"
 #include "file_manager.h"
-#include "arquivo_invertido.h"
 #include "utils.h"
 #include <stdio.h>
 #include <stdlib.h>
@@ -13,8 +13,6 @@
 #define MAX_LINE_LENGTH 300
 #define FILE_NAME_LENGTH 100
 #define PATIENT_ID_MAX 4294967295
-#define ORDEM_ARVORE_PACIENTES 50 // Ordem da árvore B de pacientes
-#define ORDEM_ARVORE_AGENDAMENTOS 100 // Ordem da árvore B de agendamentos
 
 #define CABECALHO_AGENDAMENTOS                                                                     \
     "PatientId,AppointmentID,Gender,ScheduledDay,AppointmentDay,Age,Neighbourhood,Scholarship,"    \
@@ -37,48 +35,60 @@ int main(int argc, char **argv) {
     SetConsoleOutputCP(CP_UTF8); // Define o output do console para UTF-8
 #endif
 
-    if ((argc > 1 && strcmp(argv[1], "-y") != 0) || argc == 1) {
-        // AVISO DE SOBRESCRITA
-        print(LOG_WARNING,
-              "ATENÇÃO: Essa operação irá SOBRESCREVER todos os dados salvos pelo sistema. "
-              "Proceda com cuidado\nESCREVA: \"Sim, continuar\" para continuar: ");
-        char confirmacao[20] = {0};
-        fgets(confirmacao, 20, stdin);
-        if (strcmp(confirmacao, "Sim, continuar\n") != 0) {
-            printf("Frase de confirmação inválida, saindo do sistema de importação...");
-            exit(1);
-        }
+    // Verifica se o usuário deseja ajuda
+    if (tem_argumento(argc, argv, "-h") 
+    || tem_argumento(argc, argv, "--help") 
+    || argc == 1
+    || (!tem_argumento(argc, argv, "-a") && !tem_argumento(argc, argv, "-p"))) {
+        printf("Uso: %s [-reset] [-a <arquivo_agendamentos>] [-p <arquivo_pacientes>]\n"
+        "Importa dados de agendamentos e pacientes de arquivos CSV para a base de dados.\n"
+        "  -reset: Apaga a base de dados antes de importar os dados.\n"
+        "  -a <arquivo_agendamentos>: Caminho do arquivo CSV de agendamentos.\n"
+        "  -p <arquivo_pacientes>: Caminho do arquivo CSV de pacientes.\n"
+        " > Os arquivos devem estar localizados na pasta 'input'.\n",  argv[0]);
+        return 0;
     }
 
-    print(LOG_WARNING,
-          "Confirmação informada. Autorizado para continuar a SOBRESCRITA dos dados.\n");
 
-    // Inicializa o file manager com a opção de sobrescrever os arquivos
-    if (!iniciar_file_manager(true)) {
-        print(LOG_ERROR, "Falha ao inicializar o gerenciador de arquivos.\n");
-        return 1;
+    if (tem_argumento(argc, argv, "-reset")) {
+        print(LOG_WARNING, "Você está prestes a apagar todos os dados da base de dados.\n Por "
+                           "favor, confirme digitando 'SIM' (em letras maiúsculas): ");
+        char confirmacao[4] = {0};
+        fgets(confirmacao, 4, stdin);
+        if (strcmp(confirmacao, "SIM") != 0) {
+            print(LOG_WARNING, "Confirmação não informada. Abortando a operação.\n");
+            return 0;
+        }
+        print(LOG_WARNING,
+              "Confirmação informada. Todos os dados serão apagados antes da importação\n");
+
+        apagar_todos_os_dados();
     }
 
     // Obtém o nome do arquivo de agendamentos
     char file_name[FILE_NAME_LENGTH + 1] = {0};
     char file_path[FILE_NAME_LENGTH + 11] = {0};
 
-    obter_nome_arquivo(file_name, AGENDAMENTO, argc, argv);
-    sprintf(file_path, "input/%s", file_name);
-    // Importa os agendamentos
-    if (!importar_agendamentos(file_path)) {
-        print(LOG_ERROR, "Falha ao importar os agendamentos.\n");
-        finalizar_file_manager();
-        return 1;
+    if (tem_argumento(argc, argv, "-a")) {
+        obter_nome_arquivo(file_name, AGENDAMENTO, argc, argv);
+        sprintf(file_path, "input/%s", file_name);
+        // Importa os agendamentos
+        if (!importar_agendamentos(file_path)) {
+            print(LOG_ERROR, "Falha ao importar os agendamentos.\n");
+            finalizar_file_manager();
+            return 1;
+        }
     }
 
-    obter_nome_arquivo(file_name, PACIENTE, argc, argv);
-    sprintf(file_path, "input/%s", file_name);
-    // Importa os pacientes
-    if (!importar_pacientes(file_path)) {
-        print(LOG_ERROR, "Falha ao importar os pacientes.\n");
-        finalizar_file_manager();
-        return 1;
+    if (tem_argumento(argc, argv, "-p")) {
+        obter_nome_arquivo(file_name, PACIENTE, argc, argv);
+        sprintf(file_path, "input/%s", file_name);
+        // Importa os pacientes
+        if (!importar_pacientes(file_path)) {
+            print(LOG_ERROR, "Falha ao importar os pacientes.\n");
+            finalizar_file_manager();
+            return 1;
+        }
     }
 
     // Finaliza o file manager
@@ -114,9 +124,11 @@ bool importar_agendamentos(char *file_path) {
 
     printf("Importando dados de AGENDAMENTOS do arquivo %s...\n", file_path);
 
-    bTree *arvore_indices = criaArv(ORDEM_ARVORE_AGENDAMENTOS);
-    // FIXME: não está funcionando
-    //ArquivoInvertido *ai_data = criaArquivoInvertido(1000, 50, "./data/agendamentos_data.inverted");
+    bTree *arvore_indices = carregar_arvore(obter_arquivo_indices(AGENDAMENTO, false));
+    if (arvore_indices == NULL) { // Se a árvore não existir, cria uma nova
+        arvore_indices = criaArv(ORDEM_ARVORE_AGENDAMENTOS);
+    }
+
     char linha[MAX_LINE_LENGTH] = {0};
 
     while (fgets(linha, MAX_LINE_LENGTH, arquivo_agendamentos) != NULL) {
@@ -126,8 +138,7 @@ bool importar_agendamentos(char *file_path) {
         if (consulta(arvore_indices->raiz, agendamento.id) == NULL) {
             // Agendamento não existe na base de dados
             size_t offset =
-                fappend(&agendamento, sizeof(Agendamento), 
-                obter_arquivo_dados(AGENDAMENTO));
+                fappend(&agendamento, sizeof(Agendamento), obter_arquivo_dados(AGENDAMENTO, true));
 
             if (offset == -1) {
                 print(LOG_ERROR, "Erro ao escrever o agendamento no arquivo de dados.\n");
@@ -138,22 +149,17 @@ bool importar_agendamentos(char *file_path) {
 
             // Insere o agendamento na árvore B
             insere(arvore_indices, agendamento.id, offset);
-        
-            // // Insere o agendamento no arquivo invertido de datas FIXME: não está funcionando
-            // int data = agendamento.data_consulta.dia + agendamento.data_consulta.mes * 100 + agendamento.data_consulta.ano * 10000;
 
-            // inserirRegistro(ai_data, data, (keytype) {agendamento.id, offset});
-            
         } else {
             // Agendamento já existe
             printf("Agendamento com ID %d já existe no sistema.\n", agendamento.id);
         }
-    } 
+    }
 
-    //fecharArquivoInvertido(ai_data); // FIXME: não está funcionando
+    // fecharArquivoInvertido(ai_data); // FIXME: não está funcionando
     fclose(arquivo_agendamentos);
     print(LOG_INFO, "Dados de agendamentos importados com sucesso.\n");
-    salvar_arvore(obter_arquivo_indices(AGENDAMENTO), arvore_indices);
+    salvar_arvore(obter_arquivo_indices(AGENDAMENTO, true), arvore_indices);
     print(LOG_INFO, "Árvore de índices de agendamentos salva com sucesso.\n");
     liberaArv(arvore_indices); // FIXME: liberaArv não está funcionando corretamente
     print(LOG_INFO, "Árvore de índices de agendamentos liberada com sucesso.\n");
@@ -180,7 +186,10 @@ bool importar_pacientes(char *file_path) {
     }
     printf("Importando dados de PACIENTES do arquivo %s...\n", file_path);
 
-    bTree *arvore_indices = criaArv(ORDEM_ARVORE_PACIENTES);
+    bTree *arvore_indices = carregar_arvore(obter_arquivo_indices(PACIENTE, false));
+    if (arvore_indices == NULL) { // Se a árvore não existir, cria uma nova
+        arvore_indices = criaArv(ORDEM_ARVORE_PACIENTES);
+    }
     char linha[MAX_LINE_LENGTH + 1] = {0};
 
     while (fgets(linha, MAX_LINE_LENGTH, arquivo_pacientes) != NULL) {
@@ -189,7 +198,7 @@ bool importar_pacientes(char *file_path) {
         linha_para_paciente(linha, &paciente);
 
         if (consulta(arvore_indices->raiz, paciente.id) == NULL) {
-            size_t offset = fappend(&paciente, sizeof(Paciente), obter_arquivo_dados(PACIENTE));
+            size_t offset = fappend(&paciente, sizeof(Paciente), obter_arquivo_dados(PACIENTE, true));
 
             if (offset == -1) {
                 print(LOG_ERROR, "Erro ao escrever o paciente no arquivo de dados.\n");
@@ -199,7 +208,7 @@ bool importar_pacientes(char *file_path) {
 
             // Insere o paciente na árvore B
             insere(arvore_indices, paciente.id, offset);
-            
+
             // TODO: Inserir no arquivo invertido de bairros
         } else {
             // Paciente já existe
@@ -209,7 +218,7 @@ bool importar_pacientes(char *file_path) {
 
     fclose(arquivo_pacientes);
     print(LOG_INFO, "Dados de pacientes importados com sucesso.\n");
-    salvar_arvore(obter_arquivo_indices(PACIENTE), arvore_indices);
+    salvar_arvore(obter_arquivo_indices(PACIENTE, true), arvore_indices);
     print(LOG_INFO, "Árvore de índices de pacientes salva com sucesso.\n");
     // liberaArv(arvore_indices); // FIXME: liberaArv não está funcionando corretamente
     print(LOG_INFO, "Árvore de índices de pacientes liberada com sucesso.\n");
@@ -228,7 +237,7 @@ bool importar_pacientes(char *file_path) {
 void linha_para_paciente(char *linha, Paciente *paciente) {
     char *token = strtok(linha, ","); // id
     paciente->id = (size_t)(atoi(token));
-    if(paciente->id < 0 ) {
+    if (paciente->id < 0) {
         printf("ID inválido\n");
     }
 
@@ -323,8 +332,12 @@ void obter_nome_arquivo(char *output, TipoEntidade tipo, int argc, char **argv) 
         break;
     }
 
-    for (int i = 1; i < argc - 1; i++) {
+    for (int i = 1; i < argc; i++) {
         if (strncmp(argv[i], prefixo, 2) == 0) {
+            if(i + 1 >= argc) {
+                printf("Valor do argumento %s não informado. Usando padrão '%s'\n", prefixo, output);
+                return;
+            }
             strcpy(output, argv[i + 1]);
             return;
         }

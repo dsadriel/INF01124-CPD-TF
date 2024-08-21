@@ -117,7 +117,7 @@ size_t salvar_nodo(FILE *arq, nodoBTree *n_, int ordem) {
  */
 bTree *carregar_arvore(FILE *arquivo) {
     if (arquivo == NULL) {
-        print(LOG_ERROR, "Arquivo inválido\n");
+        print(LOG_ERROR, "Arquivo de indices não existe\n");
         return NULL;
     }
 

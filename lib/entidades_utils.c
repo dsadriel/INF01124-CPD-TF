@@ -4,7 +4,7 @@
 #include <string.h>
 
 void parse_date(char *date, Timestamp *tm) {
-    sscanf(date, "%d-%d-%dT%d:%d", &tm->ano, &tm->mes, &tm->dia, &tm->hora, &tm->minuto);
+    sscanf(date, "%hd-%hd-%hdT%hd:%hd", &tm->ano, &tm->mes, &tm->dia, &tm->hora, &tm->minuto);
 }
 
 void imprimir(TipoEntidade tipo, void *entidade) {
@@ -40,13 +40,14 @@ void __imprimir_paciente(Paciente *paciente) {
     printf("Gênero: %c\n", paciente->genero);
     printf("Data de nascimento: %02d/%02d/%04d\n", paciente->data_nascimento.dia,
            paciente->data_nascimento.mes, paciente->data_nascimento.ano);
+    printf("Bairro: %s\n", paciente->bairro);
     printf("Hipertensão: %s\n", paciente->hipertensao ? "Sim" : "Não");
     printf("Diabetes: %s\n", paciente->diabetes ? "Sim" : "Não");
     printf("Alcoolismo: %s\n", paciente->alcoolismo ? "Sim" : "Não");
 }
 
 void __imprimir_paciente_linha(Paciente *paciente) {
-    printf("%10u | %50s %50s |   %c    | %02d/%02d/%04d |    %s   |    %s   |    %s   \n",
+    printf("%u | %s %s |   %c    | %02d/%02d/%04d |    %s   |    %s   |    %s   \n",
            paciente->id, paciente->nome, paciente->sobrenome, paciente->genero,
            paciente->data_nascimento.dia, paciente->data_nascimento.mes,
            paciente->data_nascimento.ano, paciente->hipertensao ? "Sim" : "Não",
@@ -121,7 +122,7 @@ void __ler_paciente(Paciente *paciente) {
     scanf(" %c", &paciente->genero);
 
     printf("Data de nascimento (dd/mm/aaaa): ");
-    scanf("%d/%d/%d", &paciente->data_nascimento.dia, &paciente->data_nascimento.mes,
+    scanf("%hd/%hd/%hd", &paciente->data_nascimento.dia, &paciente->data_nascimento.mes,
           &paciente->data_nascimento.ano);
 
     printf("Hipertensão (1 - sim, 0 - não): ");
@@ -151,12 +152,12 @@ void __ler_agendamento(Agendamento *agendamento) {
     scanf("%u", &agendamento->id_relatorio);
 
     printf("Data de agendamento (dd/mm/aaaa hh:mm): ");
-    scanf("%d/%d/%d %d:%d", &agendamento->data_agendamento.dia, &agendamento->data_agendamento.mes,
+    scanf("%hd/%hd/%hd %hd:%hd", &agendamento->data_agendamento.dia, &agendamento->data_agendamento.mes,
           &agendamento->data_agendamento.ano, &agendamento->data_agendamento.hora,
           &agendamento->data_agendamento.minuto);
 
     printf("Data da consulta (dd/mm/aaaa hh:mm): ");
-    scanf("%d/%d/%d %d:%d", &agendamento->data_consulta.dia, &agendamento->data_consulta.mes,
+    scanf("%hd/%hd/%hd %hd:%hd", &agendamento->data_consulta.dia, &agendamento->data_consulta.mes,
           &agendamento->data_consulta.ano, &agendamento->data_consulta.hora,
           &agendamento->data_consulta.minuto);
 

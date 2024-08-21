@@ -12,11 +12,11 @@ typedef enum {
 } TipoEntidade;
 
 typedef struct {
-    int dia;
-    int mes;
-    int ano;
-    int hora;
-    int minuto;
+    short dia;
+    short mes;
+    short ano;
+    short hora;
+    short minuto;
 } Timestamp;
 
 

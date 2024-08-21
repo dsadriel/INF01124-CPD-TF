@@ -10,11 +10,12 @@
 void atualizar_agendamento(int offset);
 void atualizar_paciente(size_t offset);
 
-int main(int argc, char const *argv[]) {
+int main(int argc, char *argv[]) {
 
-    if (argc < 3) {
-        print(LOG_ERROR, "Uso: %s <-a | -p | -m | -r> <id>\n", argv[0]);
-        return 1;
+    if(tem_argumento(argc, argv, "-h") || tem_argumento(argc, argv, "--help") || argc < 3) {
+        print(LOG_INFO, "Uso: %s <-a | -p> <id>\n", argv[0]);
+        print(LOG_INFO, "Atualiza um registro de agendamento ou paciente.\n");
+        return 0;
     }
 
     // Verifica o tipo de entidade
@@ -32,14 +33,9 @@ int main(int argc, char const *argv[]) {
         return 1;
     }
 
-    // Inicializa o file manager
-    if (!iniciar_file_manager(false)) {
-        print(LOG_ERROR, "Erro ao inicializar o file manager\n");
-        return 1;
-    }
 
     // Carrega a árvore B do arquivo de índices
-    bTree *arvore = carregar_arvore(obter_arquivo_indices(tipo));
+    bTree *arvore = carregar_arvore(obter_arquivo_indices(tipo, false));
 
     if (arvore == NULL) {
         print(LOG_ERROR, "Erro ao carregar a árvore B do arquivo de índices\n");
@@ -97,8 +93,7 @@ void atualizar_agendamento(int offset) {
     ler_entidade(AGENDAMENTO, agendamento);
 
     // Atualiza o registro
-    // FIXME: Atualizar os demais indexadores
-    FILE *arquivo = obter_arquivo_dados(AGENDAMENTO);
+    FILE *arquivo = obter_arquivo_dados(AGENDAMENTO, false);
     fseek(arquivo, offset, SEEK_SET);
     fwrite(agendamento, sizeof(Agendamento), 1, arquivo);
 
@@ -126,7 +121,7 @@ void atualizar_paciente(size_t offset){
 
     // Atualiza o registro
     // FIXME: Atualizar os demais indexadores
-    FILE *arquivo = obter_arquivo_dados(PACIENTE);
+    FILE *arquivo = obter_arquivo_dados(PACIENTE, false);
     fseek(arquivo, offset, SEEK_SET);
     fwrite(paciente, sizeof(Paciente), 1, arquivo);
 

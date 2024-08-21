@@ -12,11 +12,12 @@
 size_t novo_agendamento(bTree *arvore);
 size_t novo_paciente(bTree *arvore);
 
-int main(int argc, char const *argv[]) {
+int main(int argc, char *argv[]) {
 
-    if (argc < 2) {
-        print(LOG_ERROR, "Uso: %s <-a | -p>\n", argv[0]);
-        return 1;
+    if (argc < 2 || tem_argumento(argc, argv, "-h") || tem_argumento(argc, argv, "--help")) {
+        printf("Uso: %s <-a | -p>\n"
+        "  -a: Cria um novo agendamento\n"
+        "  -p: Cria um novo paciente\n", argv[0]);
     }
 
     // Verifica o tipo de entidade
@@ -34,17 +35,14 @@ int main(int argc, char const *argv[]) {
         return 1;
     }
 
-    // Inicializa o file manager
-    if (!iniciar_file_manager(false)) {
-        print(LOG_ERROR, "Erro ao inicializar o file manager\n");
-        return 1;
-    }
 
     // Carrega a árvore B do arquivo de índices
-    bTree *arvore = carregar_arvore(obter_arquivo_indices(tipo));
+    bTree *arvore = carregar_arvore(obter_arquivo_indices(tipo, false));
+    // Se a árvore não existir, cria uma nova
     if (arvore == NULL) {
-        print(LOG_ERROR, "Erro ao carregar a árvore B do arquivo de índices\n");
-        return 1;
+        print(LOG_WARNING, "Árvore B de índices não encontrada. Criando nova árvore...\n");
+        int ordem = tipo == AGENDAMENTO ? ORDEM_ARVORE_AGENDAMENTOS : ORDEM_ARVORE_PACIENTES;
+        arvore = criaArv(ordem);
     }
 
     size_t id = -1;
@@ -85,9 +83,9 @@ size_t novo_agendamento(bTree *arvore) {
     }
 
     // Adiciona o registro ao arquivo de dados
-    size_t offset = fappend(&ag, sizeof(Agendamento), obter_arquivo_dados(AGENDAMENTO));
+    size_t offset = fappend(&ag, sizeof(Agendamento), obter_arquivo_dados(AGENDAMENTO, true));
     insere(arvore, ag.id, offset);
-    salvar_arvore( obter_arquivo_indices(AGENDAMENTO), arvore);
+    salvar_arvore( obter_arquivo_indices(AGENDAMENTO, true), arvore);
 
     return ag.id;
 }
@@ -111,9 +109,9 @@ size_t novo_paciente(bTree *arvore) {
     }
 
     // Adiciona o registro ao arquivo de dados
-    size_t offset = fappend(&paciente, sizeof(Paciente), obter_arquivo_dados(PACIENTE));
+    size_t offset = fappend(&paciente, sizeof(Paciente), obter_arquivo_dados(PACIENTE, true));
     insere(arvore, paciente.id, offset);
-    salvar_arvore( obter_arquivo_indices(PACIENTE), arvore);
+    salvar_arvore( obter_arquivo_indices(PACIENTE, true), arvore);
 
     return paciente.id;
 }

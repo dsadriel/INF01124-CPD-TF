@@ -3,6 +3,8 @@
 
 #include <stdio.h>
 #include <stdarg.h>
+#include <stdbool.h>
+#include <string.h>
 
 // Define as cores para uso no console
 #define RESET   "\033[0m"
@@ -20,5 +22,6 @@ typedef enum {
 
 // Funções de utilidade
 void print(log_level level, const char *msg, ...);
+bool tem_argumento(int argc, char **argv, char *arg);
 
 #endif
